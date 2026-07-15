@@ -10,8 +10,7 @@ const app = express();
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://erp.snapfunstudio.id',
-  'https://resonant-llama-77ee11.netlify.app'
+  'https://erp.snapfunstudio.id'
 ];
 
 app.use(cors({
