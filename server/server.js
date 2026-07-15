@@ -1,8 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql2');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const db = require('./config/database');
 require('dotenv').config();
 
 const app = express();
@@ -29,22 +29,6 @@ app.use(express.json());
 app.use('/pr_attachment', express.static(path.join(__dirname, 'pr_attachment')));
 app.use('/asset_attachment', express.static(path.join(__dirname, 'asset_attachment')));
 app.use('/inventory_attachments', express.static(path.join(__dirname, 'inventory_attachments')));
-
-// Database Connection
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME
-});
-
-db.connect((err) => {
-  if (err) {
-    console.error('Database connection failed:', err);
-    return;
-  }
-  console.log('Connected to MySQL database');
-});
 
 // Make db accessible to routes
 app.locals.db = db;
