@@ -1,9 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Moon, Sun } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
 
 function AdminRegister() {
   const navigate = useNavigate()
+  const { isDarkMode, toggleDarkMode } = useTheme()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -119,7 +121,16 @@ function AdminRegister() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex">
+    <div className={`min-h-screen flex ${isDarkMode ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-blue-50 to-blue-100'}`}>
+      {/* Dark Mode Toggle Button */}
+      <button
+        onClick={toggleDarkMode}
+        className="fixed top-4 right-4 p-3 rounded-full bg-white dark:bg-slate-700 shadow-lg hover:shadow-xl transition-all duration-300 z-50"
+        title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+      >
+        {isDarkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-gray-700" />}
+      </button>
+
       {/* Left Side - Mascot */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-8">
         <div className="text-center">
@@ -128,8 +139,8 @@ function AdminRegister() {
             alt="SnapFun Mascot" 
             className="w-full max-w-md mx-auto mb-6"
           />
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Admin Registration</h2>
-          <p className="text-gray-600 text-lg">Join the SnapFun management team</p>
+          <h2 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Admin Registration</h2>
+          <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Join the SnapFun management team</p>
         </div>
       </div>
 
@@ -139,56 +150,64 @@ function AdminRegister() {
           {/* Back to Admin Login Button */}
           <Link
             to="/admin-login"
-            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors mb-4"
+            className={`flex items-center transition-colors mb-4 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Back to Admin Login
           </Link>
 
-          <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className={`rounded-2xl shadow-xl p-8 ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
           {/* Logo */}
           <div className="flex items-center justify-center mb-6">
             <img src="/snapfun_logo.png" alt="SnapFunERP Logo" className="h-16 mr-3" />
-            <span className="text-xl font-bold text-gray-800">Resource System</span>
+            <span className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Resource System</span>
           </div>
 
           {/* Create Account Text */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Create Administrator Account</h1>
-            <p className="text-gray-500">Register to start managing the system</p>
+            <h1 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Create Administrator Account</h1>
+            <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Register to start managing the system</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleRegister} className="space-y-5">
             {/* Full Name Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Full Name</label>
               <input
                 type="text"
                 placeholder="John Doe"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${
+                  isDarkMode 
+                    ? 'bg-slate-700 border-slate-600 text-white focus:ring-blue-500 placeholder-gray-400' 
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
                 required
               />
             </div>
 
             {/* Email Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email</label>
               <input
                 type="email"
                 placeholder="admin@snapfun.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${
+                  isDarkMode 
+                    ? 'bg-slate-700 border-slate-600 text-white focus:ring-blue-500 placeholder-gray-400' 
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
                 required
               />
             </div>
 
             {/* Password Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -196,14 +215,20 @@ function AdminRegister() {
                   value={password}
                   onChange={handlePasswordChange}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition pr-12 ${
-                    passwordComplexityError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    passwordComplexityError 
+                      ? isDarkMode 
+                        ? 'border-red-500 bg-slate-700 text-white focus:ring-red-500 placeholder-gray-400' 
+                        : 'border-red-500 focus:ring-red-500'
+                      : isDarkMode 
+                        ? 'bg-slate-700 border-slate-600 text-white focus:ring-blue-500 placeholder-gray-400' 
+                        : 'border-gray-300 focus:ring-blue-500'
                   }`}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-70 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,7 +249,7 @@ function AdminRegister() {
 
             {/* Confirm Password Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm Password</label>
               <div className="relative">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -232,14 +257,20 @@ function AdminRegister() {
                   value={confirmPassword}
                   onChange={handleConfirmPasswordChange}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition pr-12 ${
-                    passwordError ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    passwordError 
+                      ? isDarkMode 
+                        ? 'border-red-500 bg-slate-700 text-white focus:ring-red-500 placeholder-gray-400' 
+                        : 'border-red-500 focus:ring-red-500'
+                      : isDarkMode 
+                        ? 'bg-slate-700 border-slate-600 text-white focus:ring-blue-500 placeholder-gray-400' 
+                        : 'border-gray-300 focus:ring-blue-500'
                   }`}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 hover:opacity-70 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
                 >
                   {showConfirmPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,16 +291,20 @@ function AdminRegister() {
 
             {/* Unique Code Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Company Unique Code
-                <span className="text-xs text-gray-500 ml-2">(Required from CEO/C-Level)</span>
+                <span className={`text-xs ml-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>(Required from CEO/C-Level)</span>
               </label>
               <input
                 type="text"
                 placeholder="Enter unique code"
                 value={uniqueCode}
                 onChange={(e) => setUniqueCode(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${
+                  isDarkMode 
+                    ? 'bg-slate-700 border-slate-600 text-white focus:ring-blue-500 placeholder-gray-400' 
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
                 required
               />
             </div>
@@ -295,14 +330,18 @@ function AdminRegister() {
 
           {/* API Error Message */}
           {apiError && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+            <div className={`mt-4 p-3 border rounded-lg text-sm ${
+              isDarkMode 
+                ? 'bg-red-900/30 border-red-800 text-red-300' 
+                : 'bg-red-100 border-red-400 text-red-700'
+            }`}>
               {apiError}
             </div>
           )}
 
           {/* Sign In Link */}
           <div className="text-center mt-6">
-            <p className="text-gray-600">
+            <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
               Already have an account?{' '}
               <Link to="/admin-login" className="text-blue-600 font-medium hover:text-blue-700">
                 Sign in here
