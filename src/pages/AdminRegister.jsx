@@ -122,15 +122,6 @@ function AdminRegister() {
 
   return (
     <div className={`min-h-screen flex ${isDarkMode ? 'bg-gradient-to-br from-slate-900 to-slate-800' : 'bg-gradient-to-br from-blue-50 to-blue-100'}`}>
-      {/* Dark Mode Toggle Button */}
-      <button
-        onClick={toggleDarkMode}
-        className="fixed top-4 right-4 p-3 rounded-full bg-white dark:bg-slate-700 shadow-lg hover:shadow-xl transition-all duration-300 z-50"
-        title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-      >
-        {isDarkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-gray-700" />}
-      </button>
-
       {/* Left Side - Mascot */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center p-8">
         <div className="text-center">
@@ -147,14 +138,23 @@ function AdminRegister() {
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          {/* Back to Admin Login Button */}
-          <Link
-            to="/admin-login"
-            className={`flex items-center transition-colors mb-4 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Admin Login
-          </Link>
+          {/* Dark Mode Toggle & Back Button */}
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            <Link
+              to="/admin-login"
+              className={`flex items-center transition-colors ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-800'}`}
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Admin Login
+            </Link>
+          </div>
 
           <div className={`rounded-2xl shadow-xl p-8 ${isDarkMode ? 'bg-slate-800' : 'bg-white'}`}>
           {/* Logo */}
