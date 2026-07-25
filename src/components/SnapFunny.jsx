@@ -25,7 +25,10 @@ function SnapFunny() {
   const messagesEndRef = useRef(null)
 
   // Draggable position state (distance from right/bottom in pixels)
-  const [position, setPosition] = useState({ right: 24, bottom: 24 })
+  const [position, setPosition] = useState(() => {
+    const savedPosition = sessionStorage.getItem('snapfunny_position')
+    return savedPosition ? JSON.parse(savedPosition) : { right: 24, bottom: 24 }
+  })
   const [isDragging, setIsDragging] = useState(false)
   const dragOffsetRef = useRef({ x: 0, y: 0 })
   const hasDraggedRef = useRef(false)
@@ -36,6 +39,11 @@ function SnapFunny() {
       sessionStorage.setItem('snapfunny_chat_history', JSON.stringify(messages))
     }
   }, [messages])
+
+  // Save position to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('snapfunny_position', JSON.stringify(position))
+  }, [position])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
