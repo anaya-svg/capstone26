@@ -188,7 +188,7 @@ function SnapFunny() {
       {isOpen && (
         <div className="fixed bottom-24 right-6 w-96 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-700 to-indigo-700 text-white p-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-purple-800 to-indigo-800 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img src="/snapfun_mascot_header.png" alt="SnapFunny" className="w-10 h-10 rounded-full object-cover" />
               <div>
@@ -214,7 +214,7 @@ function SnapFunny() {
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                     message.role === 'user'
-                      ? 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white shadow-md'
+                      ? 'bg-gradient-to-r from-purple-800 to-indigo-800 text-white shadow-md'
                       : 'bg-white text-gray-800 border border-gray-200 shadow-sm'
                   }`}
                 >
@@ -228,9 +228,9 @@ function SnapFunny() {
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-200 rounded-2xl px-4 py-2 shadow-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
               </div>
@@ -247,7 +247,7 @@ function SnapFunny() {
                   type="button"
                   onClick={() => handleQuickPrompt(prompt)}
                   disabled={isLoading}
-                  className="whitespace-nowrap px-3 py-1.5 text-xs font-medium rounded-full border border-purple-300 bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs font-medium rounded-full border border-purple-400 bg-purple-200 text-purple-900 hover:bg-purple-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {prompt}
                 </button>
@@ -260,13 +260,13 @@ function SnapFunny() {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Tanya SnapFunny..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent text-sm"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-700 focus:border-transparent text-sm"
                 disabled={isLoading}
               />
               <button
                 onClick={handleSendMessage}
                 disabled={isLoading || !inputValue.trim()}
-                className="w-10 h-10 bg-gradient-to-r from-purple-700 to-indigo-700 rounded-full flex items-center justify-center text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                className="w-10 h-10 bg-gradient-to-r from-purple-800 to-indigo-800 rounded-full flex items-center justify-center text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -278,7 +278,7 @@ function SnapFunny() {
       {/* Floating Button */}
       <button
         onClick={toggleChat}
-        className="fixed bottom-6 right-6 flex items-center gap-3 bg-gradient-to-r from-purple-700 to-indigo-700 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+        className="fixed bottom-6 right-6 flex items-center gap-3 bg-gradient-to-r from-purple-800 to-indigo-800 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
       >
         <img src="/snapfun_mascot.png" alt="SnapFunny" className="w-8 h-8 rounded-full object-cover" />
         <span className="font-semibold text-sm">Ask me!</span>
