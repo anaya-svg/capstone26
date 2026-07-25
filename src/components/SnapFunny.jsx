@@ -24,6 +24,12 @@ function SnapFunny() {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef(null)
 
+  // Draggable position state (distance from right/bottom in pixels)
+  const [position, setPosition] = useState({ right: 24, bottom: 24 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragOffsetRef = useRef({ x: 0, y: 0 })
+  const hasDraggedRef = useRef(false)
+
   // Save messages to sessionStorage whenever they change
   useEffect(() => {
     if (messages.length > 0) {
@@ -176,19 +182,74 @@ function SnapFunny() {
   }
 
   const toggleChat = () => {
+    if (hasDraggedRef.current) return
     setIsOpen(!isOpen)
     if (!isOpen && messages.length === 0) {
       setMessages([{ role: 'assistant', content: 'Hi, Aku SnapFunny! Ada yang bisa aku bantu?' }])
     }
   }
 
+  const handleMouseDown = (e) => {
+    setIsDragging(true)
+    hasDraggedRef.current = false
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0
+    dragOffsetRef.current = { x: clientX, y: clientY }
+  }
+
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleMove = (e) => {
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0
+
+      const deltaX = clientX - dragOffsetRef.current.x
+      const deltaY = clientY - dragOffsetRef.current.y
+
+      if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+        hasDraggedRef.current = true
+      }
+
+      setPosition((prev) => ({
+        right: Math.max(0, prev.right - deltaX),
+        bottom: Math.max(0, prev.bottom - deltaY)
+      }))
+
+      dragOffsetRef.current = { x: clientX, y: clientY }
+    }
+
+    const handleUp = () => {
+      setIsDragging(false)
+    }
+
+    window.addEventListener('mousemove', handleMove)
+    window.addEventListener('mouseup', handleUp)
+    window.addEventListener('touchmove', handleMove, { passive: false })
+    window.addEventListener('touchend', handleUp)
+
+    return () => {
+      window.removeEventListener('mousemove', handleMove)
+      window.removeEventListener('mouseup', handleUp)
+      window.removeEventListener('touchmove', handleMove)
+      window.removeEventListener('touchend', handleUp)
+    }
+  }, [isDragging])
+
   return (
     <div className="z-50">
       {/* Chat Box */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-96 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
+        <div
+          className="fixed w-96 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200"
+          style={{ right: position.right, bottom: position.bottom + 80 }}
+        >
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-800 to-indigo-800 text-white p-4 flex items-center justify-between">
+          <div
+            className="bg-gradient-to-r from-purple-800 to-indigo-800 text-white p-4 flex items-center justify-between cursor-move"
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleMouseDown}
+          >
             <div className="flex items-center gap-3">
               <img src="/snapfun_mascot_header.png" alt="SnapFunny" className="w-10 h-10 rounded-full object-cover" />
               <div>
@@ -278,7 +339,10 @@ function SnapFunny() {
       {/* Floating Button */}
       <button
         onClick={toggleChat}
-        className="fixed bottom-6 right-6 flex items-center gap-3 bg-gradient-to-r from-purple-800 to-indigo-800 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleMouseDown}
+        style={{ right: position.right, bottom: position.bottom }}
+        className={`fixed flex items-center gap-3 bg-gradient-to-r from-purple-800 to-indigo-800 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       >
         <img src="/snapfun_mascot.png" alt="SnapFunny" className="w-8 h-8 rounded-full object-cover" />
         <span className="font-semibold text-sm">Ask me!</span>
