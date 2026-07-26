@@ -64,9 +64,17 @@ function SnapFunny() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/chatbot/chat`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: (() => {
+          const hdrs = { 'Content-Type': 'application/json' };
+          const userData = sessionStorage.getItem('user');
+          if (userData) {
+            try {
+              const { session_token } = JSON.parse(userData);
+              if (session_token) hdrs['Authorization'] = `Bearer ${session_token}`;
+            } catch {}
+          }
+          return hdrs;
+        })(),
         body: JSON.stringify({ message: userMessage })
       })
 

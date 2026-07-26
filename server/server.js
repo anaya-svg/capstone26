@@ -34,11 +34,16 @@ app.use('/inventory_attachments', express.static(path.join(__dirname, 'inventory
 app.locals.db = db;
 
 // Email Transporter Configuration
+if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+  console.error('EMAIL_USER and EMAIL_APP_PASSWORD must be set in environment variables');
+  process.exit(1);
+}
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: process.env.EMAIL_USER || 'mahfuzardana02@gmail.com',
-    pass: process.env.EMAIL_APP_PASSWORD || 'mnqx mujd jgln dvvg'
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_APP_PASSWORD
   }
 });
 
@@ -428,16 +433,25 @@ const createEventAssetsTable = () => {
   });
 };
 
-// Create trigger for auto-generating event_id
+// Create trigger for auto-generating event_id (only if not exists)
 const createEventIdTrigger = () => {
-  const dropTriggerQuery = 'DROP TRIGGER IF EXISTS generate_event_id';
-  db.query(dropTriggerQuery, (err) => {
-    if (err && err.code !== 'ER_TRG_DOES_NOT_EXIST') {
-      console.error('Error dropping trigger:', err);
-    }
-  });
+  const checkTriggerQuery = `
+    SELECT COUNT(*) as count FROM information_schema.triggers
+    WHERE trigger_name = 'generate_event_id'
+    AND trigger_schema = DATABASE()
+  `;
 
-  const createTriggerQuery = `
+  db.query(checkTriggerQuery, (err, results) => {
+    if (err) {
+      console.error('Error checking event_id trigger:', err);
+      return;
+    }
+    if (results[0].count > 0) {
+      console.log('Event ID trigger already exists');
+      return;
+    }
+
+    const createTriggerQuery = `
     CREATE TRIGGER generate_event_id
     BEFORE INSERT ON events
     FOR EACH ROW
@@ -447,13 +461,11 @@ const createEventIdTrigger = () => {
       END IF;
     END
   `;
-  
-  db.query(createTriggerQuery, (err, result) => {
-    if (err) {
-      console.error('Error creating event_id trigger:', err);
-    } else {
-      console.log('Event ID trigger ready');
-    }
+
+    db.query(createTriggerQuery, (err) => {
+      if (err) console.error('Error creating event_id trigger:', err);
+      else console.log('Event ID trigger ready');
+    });
   });
 };
 
@@ -924,61 +936,64 @@ app.get('/', (req, res) => {
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+// --- Protected routes (authentication required) ---
+const { requireAuth, requireAdmin } = require('./middleware/auth');
+
 // Events Routes
 const eventsRoutes = require('./routes/events');
-app.use('/api/events', eventsRoutes);
+app.use('/api/events', requireAuth, eventsRoutes);
 
 // Calendar Activities Routes
 const calendarRoutes = require('./routes/calendar');
-app.use('/api/calendar', calendarRoutes);
+app.use('/api/calendar', requireAuth, calendarRoutes);
 
 // Procurement Routes
 const procurementRoutes = require('./routes/procurement');
-app.use('/api/procurement', procurementRoutes);
+app.use('/api/procurement', requireAuth, procurementRoutes);
 
 // Assets Routes
 const assetsRoutes = require('./routes/assets');
-app.use('/api/assets', assetsRoutes);
+app.use('/api/assets', requireAuth, assetsRoutes);
 
 // Customers Routes
 const customersRoutes = require('./routes/customers');
-app.use('/api/customers', customersRoutes);
+app.use('/api/customers', requireAuth, customersRoutes);
 
 // Users Management Routes
 const usersRoutes = require('./routes/users');
-app.use('/api/users', usersRoutes);
+app.use('/api/users', requireAuth, requireAdmin, usersRoutes);
 
 // Inventory Routes
 const inventoryRoutes = require('./routes/inventory');
-app.use('/api/inventory', inventoryRoutes);
+app.use('/api/inventory', requireAuth, inventoryRoutes);
 
 // Categories Routes
 const categoriesRoutes = require('./routes/categories');
-app.use('/api/categories', categoriesRoutes);
+app.use('/api/categories', requireAuth, categoriesRoutes);
 
 // UOM Routes
 const uomRoutes = require('./routes/uom');
-app.use('/api/uom', uomRoutes);
+app.use('/api/uom', requireAuth, uomRoutes);
 
 // Booth Setups Routes
 const boothSetupsRoutes = require('./routes/boothSetups');
-app.use('/api/booth-setups', boothSetupsRoutes);
+app.use('/api/booth-setups', requireAuth, boothSetupsRoutes);
 
 // Vendors Routes
 const vendorsRoutes = require('./routes/vendors');
-app.use('/api/vendors', vendorsRoutes);
+app.use('/api/vendors', requireAuth, vendorsRoutes);
 
 // Dashboard Routes
 const dashboardRoutes = require('./routes/dashboard');
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard', requireAuth, dashboardRoutes);
 
 // Chatbot Routes
 const chatbotRoutes = require('./routes/chatbot');
-app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/chatbot', requireAuth, chatbotRoutes);
 
 // Promotions Routes
 const promotionsRoutes = require('./routes/promotions');
-app.use('/api/promotions', promotionsRoutes);
+app.use('/api/promotions', requireAuth, promotionsRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5000;

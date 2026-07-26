@@ -380,8 +380,12 @@ router.get('/recent-procurement', (req, res) => {
   });
 });
 
-// POST clear all system data (admin only - destructive operation)
+// Endpoint clear-all-data dihapus permanen; jika ada yang memanggil kembalikan 410 Gone
 router.post('/clear-all-data', (req, res) => {
+  return res.status(410).json({ success: false, message: 'Endpoint removed' });
+});
+
+/*
   const db = req.app.locals.db;
 
   // Clear in order to respect foreign key constraints
@@ -404,34 +408,28 @@ router.post('/clear-all-data', (req, res) => {
     // 'DELETE FROM booth_setups'
   ];
 
-  let queryIndex = 0;
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
 
-  const executeNextQuery = () => {
-    if (queryIndex >= queries.length) {
-      return res.json({
-        success: true,
-        message: 'All system data cleared successfully'
-      });
-    }
-
-    db.query(queries[queryIndex], (err, result) => {
-      if (err) {
-        console.error(`Error executing query ${queryIndex}:`, err);
-        return res.status(500).json({
-          success: false,
-          message: 'Error clearing data'
+    let index = 0;
+    function run() {
+      if (index >= queries.length) {
+        return db.commit(err => {
+          if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
+          res.json({ success: true, message: 'All system data cleared successfully' });
         });
       }
+      db.query(queries[index], (err) => {
+        if (err) return db.rollback(() => res.status(500).json({ success: false, message: `Error clearing data: ${err.code}` }));
+        index++;
+        run();
+      });
+    }
+    run();
+  });
+*/
 
-      queryIndex++;
-      executeNextQuery();
-    });
-  };
-
-  executeNextQuery();
-});
-
-// GET accounting report with date filter
+// GET accounting report dengan date filter
 router.get('/accounting-report', (req, res) => {
   const db = req.app.locals.db;
   const { startDate, endDate, filterType, reportFocus } = req.query;
