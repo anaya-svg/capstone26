@@ -51,12 +51,10 @@ function Register() {
   const handleRegister = async (e) => {
     e.preventDefault()
     
-    // Validate password complexity
     if (passwordComplexityError) {
       return
     }
     
-    // Validate password match
     if (password !== confirmPassword) {
       setPasswordError('Passwords do not match')
       return
@@ -82,7 +80,6 @@ function Register() {
       const data = await response.json()
 
       if (data.success) {
-        // Redirect to email verification page with email and verification code (development mode)
         navigate('/email-verification', {
           state: {
             isAdmin: false,
@@ -110,7 +107,6 @@ function Register() {
     const value = e.target.value
     setConfirmPassword(value)
     
-    // Clear error when passwords match
     if (password && value && password === value) {
       setPasswordError('')
     } else if (password && value && password !== value) {

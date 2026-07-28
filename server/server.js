@@ -7,7 +7,6 @@ require('dotenv').config();
 
 const app = express();
 
-// Middleware
 const allowedOrigins = [
   'http://localhost:5173',
   'https://erp.snapfunstudio.id'
@@ -25,15 +24,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Serve static files from upload directories
 app.use('/pr_attachment', express.static(path.join(__dirname, 'pr_attachment')));
 app.use('/asset_attachment', express.static(path.join(__dirname, 'asset_attachment')));
 app.use('/inventory_attachments', express.static(path.join(__dirname, 'inventory_attachments')));
 
-// Make db accessible to routes
 app.locals.db = db;
 
-// Email Transporter Configuration
 if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
   console.error('EMAIL_USER and EMAIL_APP_PASSWORD must be set in environment variables');
   process.exit(1);
@@ -47,10 +43,8 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Make transporter accessible to routes
 app.locals.transporter = transporter;
 
-// Create users table if not exists
 const createUsersTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS users (
@@ -74,7 +68,6 @@ const createUsersTable = () => {
       console.error('Error creating users table:', err);
     } else {
       console.log('Users table ready');
-      // Check if status column exists, if not add it
       const checkStatusColumn = `
         SELECT COLUMN_NAME 
         FROM INFORMATION_SCHEMA.COLUMNS 
@@ -95,7 +88,6 @@ const createUsersTable = () => {
           });
         }
       });
-      // Check if last_login column exists, if not add it
       const checkLastLoginColumn = `
         SELECT COLUMN_NAME
         FROM INFORMATION_SCHEMA.COLUMNS
@@ -116,7 +108,6 @@ const createUsersTable = () => {
           });
         }
       });
-      // Check if session_token column exists, if not add it
       const checkSessionTokenColumn = `
         SELECT COLUMN_NAME
         FROM INFORMATION_SCHEMA.COLUMNS
@@ -137,7 +128,6 @@ const createUsersTable = () => {
           });
         }
       });
-      // Check if session_expires_at column exists, if not add it
       const checkSessionExpiresColumn = `
         SELECT COLUMN_NAME
         FROM INFORMATION_SCHEMA.COLUMNS
@@ -162,7 +152,6 @@ const createUsersTable = () => {
   });
 };
 
-// Create procurement_requests table if not exists
 const createProcurementRequestsTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS procurement_requests (
@@ -191,9 +180,7 @@ const createProcurementRequestsTable = () => {
   });
 };
 
-// Create procurement_request_items table if not exists
 const createProcurementRequestItemsTable = () => {
-  // First, check if item_id column exists
   const checkItemColumnQuery = `
     SELECT COLUMN_NAME 
     FROM INFORMATION_SCHEMA.COLUMNS 
@@ -209,7 +196,6 @@ const createProcurementRequestItemsTable = () => {
     }
 
     if (results.length === 0) {
-      // Column doesn't exist, add it
       const addColumnQuery = `
         ALTER TABLE procurement_request_items 
         ADD COLUMN item_id INT,
@@ -227,7 +213,6 @@ const createProcurementRequestItemsTable = () => {
     }
   });
 
-  // Check if asset_id column exists
   const checkColumnQuery = `
     SELECT COLUMN_NAME 
     FROM INFORMATION_SCHEMA.COLUMNS 
@@ -243,7 +228,6 @@ const createProcurementRequestItemsTable = () => {
     }
 
     if (results.length === 0) {
-      // Column doesn't exist, add it
       const addColumnQuery = `
         ALTER TABLE procurement_request_items 
         ADD COLUMN asset_id VARCHAR(20),
@@ -262,7 +246,6 @@ const createProcurementRequestItemsTable = () => {
   });
 };
 
-// Create events table if not exists
 const createBoothSetupsTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS booth_setups (
@@ -277,7 +260,6 @@ const createBoothSetupsTable = () => {
       console.error('Error creating booth_setups table:', err);
     } else {
       console.log('Booth Setups table ready');
-      // Insert default booth setups if table is empty
       const checkQuery = 'SELECT COUNT(*) as count FROM booth_setups';
       db.query(checkQuery, (err, result) => {
         if (err) {
@@ -333,7 +315,6 @@ const createEventsTable = () => {
     } else {
       console.log('Events table ready');
       
-      // Update ENUM values for existing tables
       const alterEnumQuery = `
         ALTER TABLE events 
         MODIFY COLUMN status ENUM('upcoming', 'in_progress', 'completed', 'cancelled') DEFAULT 'upcoming'
@@ -346,7 +327,6 @@ const createEventsTable = () => {
         }
       });
       
-      // Add customer_id column if it doesn't exist (for existing tables)
       const addColumnQuery = `
         ALTER TABLE events 
         ADD COLUMN customer_id INT,
@@ -358,7 +338,6 @@ const createEventsTable = () => {
         }
       });
 
-      // Add created_by column if it doesn't exist (for existing tables)
       const addCreatedByQuery = `
         ALTER TABLE events 
         ADD COLUMN created_by VARCHAR(255) NULL
@@ -374,9 +353,7 @@ const createEventsTable = () => {
   });
 };
 
-// Create event_assets table if not exists
 const createEventAssetsTable = () => {
-  // Check if table exists and has the correct structure
   const checkTableQuery = `
     SELECT COLUMN_NAME 
     FROM INFORMATION_SCHEMA.COLUMNS 
@@ -433,7 +410,6 @@ const createEventAssetsTable = () => {
   });
 };
 
-// Create trigger for auto-generating event_id (only if not exists)
 const createEventIdTrigger = () => {
   const checkTriggerQuery = `
     SELECT COUNT(*) as count FROM information_schema.triggers
@@ -469,7 +445,6 @@ const createEventIdTrigger = () => {
   });
 };
 
-// Create calendar_activities table if not exists
 const createCalendarActivitiesTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS calendar_activities (
@@ -492,7 +467,6 @@ const createCalendarActivitiesTable = () => {
   });
 };
 
-// Create assets table
 const createAssetsTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS assets (
@@ -520,7 +494,6 @@ const createAssetsTable = () => {
       console.error('Error creating assets table:', err);
     } else {
       console.log('Assets table ready');
-      // Add quantity column if it doesn't exist
       const alterQuery = `
         ALTER TABLE assets
         ADD COLUMN quantity INT DEFAULT 1 AFTER \`condition\`
@@ -538,7 +511,6 @@ const createAssetsTable = () => {
   });
 };
 
-// Create customers table
 const createCustomersTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS customers (
@@ -563,7 +535,6 @@ const createCustomersTable = () => {
       console.error('Error creating customers table:', err);
     } else {
       console.log('Customers table ready');
-      // Check and add new columns if they don't exist
       const checkColumns = `
         SELECT COLUMN_NAME 
         FROM INFORMATION_SCHEMA.COLUMNS 
@@ -579,7 +550,6 @@ const createCustomersTable = () => {
         
         const existingColumns = results.map(row => row.COLUMN_NAME);
         
-        // Add UNIQUE constraint to name column if not exists (for existing tables)
         const checkUniqueConstraint = `
           SELECT CONSTRAINT_NAME
           FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
@@ -608,7 +578,6 @@ const createCustomersTable = () => {
           }
         });
         
-        // Add is_in_studio column if not exists
         if (!existingColumns.includes('is_in_studio')) {
           db.query(`ALTER TABLE customers ADD COLUMN is_in_studio BOOLEAN DEFAULT FALSE`, (err) => {
             if (err) console.error('Error adding is_in_studio column:', err);
@@ -616,7 +585,6 @@ const createCustomersTable = () => {
           });
         }
         
-        // Add is_off_site column if not exists
         if (!existingColumns.includes('is_off_site')) {
           db.query(`ALTER TABLE customers ADD COLUMN is_off_site BOOLEAN DEFAULT FALSE`, (err) => {
             if (err) console.error('Error adding is_off_site column:', err);
@@ -624,7 +592,6 @@ const createCustomersTable = () => {
           });
         }
         
-        // Add in_studio_date_added column if not exists
         if (!existingColumns.includes('in_studio_date_added')) {
           db.query(`ALTER TABLE customers ADD COLUMN in_studio_date_added TIMESTAMP NULL`, (err) => {
             if (err) console.error('Error adding in_studio_date_added column:', err);
@@ -632,7 +599,6 @@ const createCustomersTable = () => {
           });
         }
         
-        // Add off_site_date_added column if not exists
         if (!existingColumns.includes('off_site_date_added')) {
           db.query(`ALTER TABLE customers ADD COLUMN off_site_date_added TIMESTAMP NULL`, (err) => {
             if (err) console.error('Error adding off_site_date_added column:', err);
@@ -644,7 +610,6 @@ const createCustomersTable = () => {
   });
 };
 
-// Create customer_visits table
 const createCustomerVisitsTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS customer_visits (
@@ -666,7 +631,6 @@ const createCustomerVisitsTable = () => {
   });
 };
 
-// Create inventory table if not exists
 const createInventoryTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS inventory (
@@ -693,7 +657,6 @@ const createInventoryTable = () => {
     } else {
       console.log('Inventory table ready');
       
-      // Check and add missing columns one by one
       db.query(`SHOW COLUMNS FROM inventory`, (err, columns) => {
         if (err) {
           console.error('Error checking inventory columns:', err);
@@ -746,7 +709,6 @@ const createInventoryTable = () => {
   });
 };
 
-// Create categories table if not exists
 const createCategoriesTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS categories (
@@ -761,7 +723,6 @@ const createCategoriesTable = () => {
       console.error('Error creating categories table:', err);
     } else {
       console.log('Categories table ready');
-      // Insert default categories
       const checkCategories = `SELECT COUNT(*) as count FROM categories`;
       db.query(checkCategories, (err, results) => {
         if (err) {
@@ -783,7 +744,6 @@ const createCategoriesTable = () => {
   });
 };
 
-// Create UOM table if not exists
 const createUOMTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS uom (
@@ -798,7 +758,6 @@ const createUOMTable = () => {
       console.error('Error creating UOM table:', err);
     } else {
       console.log('UOM table ready');
-      // Insert default UOMs
       const checkUOM = `SELECT COUNT(*) as count FROM uom`;
       db.query(checkUOM, (err, results) => {
         if (err) {
@@ -820,7 +779,6 @@ const createUOMTable = () => {
   });
 };
 
-// Create asset ID trigger
 const createAssetIdTrigger = () => {
   const checkTriggerQuery = `
     SELECT COUNT(*) as count FROM information_schema.triggers
@@ -885,7 +843,6 @@ const createPromotionsTable = () => {
     } else {
       console.log('Promotions table ready');
       
-      // Let's add promo_id and discount_amount columns to customer_visits table if they don't exist
       const checkVisitColumns = "SHOW COLUMNS FROM customer_visits LIKE 'promo_id'";
       db.query(checkVisitColumns, (err, results) => {
         if (!err && results.length === 0) {
@@ -896,7 +853,6 @@ const createPromotionsTable = () => {
         }
       });
 
-      // Let's add promo_id and discount_amount columns to events table if they don't exist
       const checkEventColumns = "SHOW COLUMNS FROM events LIKE 'promo_id'";
       db.query(checkEventColumns, (err, results) => {
         if (!err && results.length === 0) {
@@ -927,75 +883,57 @@ createCategoriesTable();
 createUOMTable();
 createInventoryTable();
 
-// Routes
 app.get('/', (req, res) => {
   res.json({ message: 'SnapFun ERP API is running' });
 });
 
-// Auth Routes
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
-// --- Protected routes (authentication required) ---
 const { requireAuth, requireAdmin } = require('./middleware/auth');
 
-// Events Routes
 const eventsRoutes = require('./routes/events');
 app.use('/api/events', requireAuth, eventsRoutes);
 
-// Calendar Activities Routes
 const calendarRoutes = require('./routes/calendar');
 app.use('/api/calendar', requireAuth, calendarRoutes);
 
-// Procurement Routes
 const procurementRoutes = require('./routes/procurement');
 app.use('/api/procurement', requireAuth, procurementRoutes);
 
-// Assets Routes
 const assetsRoutes = require('./routes/assets');
 app.use('/api/assets', requireAuth, assetsRoutes);
 
-// Customers Routes
 const customersRoutes = require('./routes/customers');
 app.use('/api/customers', requireAuth, customersRoutes);
 
-// Users Management Routes
 const usersRoutes = require('./routes/users');
 app.use('/api/users', requireAuth, requireAdmin, usersRoutes);
 
-// Inventory Routes
 const inventoryRoutes = require('./routes/inventory');
 app.use('/api/inventory', requireAuth, inventoryRoutes);
 
-// Categories Routes
 const categoriesRoutes = require('./routes/categories');
 app.use('/api/categories', requireAuth, categoriesRoutes);
 
-// UOM Routes
 const uomRoutes = require('./routes/uom');
 app.use('/api/uom', requireAuth, uomRoutes);
 
-// Booth Setups Routes
 const boothSetupsRoutes = require('./routes/boothSetups');
 app.use('/api/booth-setups', requireAuth, boothSetupsRoutes);
 
-// Vendors Routes
 const vendorsRoutes = require('./routes/vendors');
 app.use('/api/vendors', requireAuth, vendorsRoutes);
 
-// Dashboard Routes
 const dashboardRoutes = require('./routes/dashboard');
 app.use('/api/dashboard', requireAuth, dashboardRoutes);
 
-// Chatbot Routes
 const chatbotRoutes = require('./routes/chatbot');
 app.use('/api/chatbot', requireAuth, chatbotRoutes);
 
-// Promotions Routes
 const promotionsRoutes = require('./routes/promotions');
 app.use('/api/promotions', requireAuth, promotionsRoutes);
 
-// Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

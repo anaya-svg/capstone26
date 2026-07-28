@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// GET all categories
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
 
@@ -27,7 +26,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST create new category
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const { category_name } = req.body;
@@ -70,7 +68,6 @@ router.post('/', (req, res) => {
   });
 });
 
-// DELETE category
 router.delete('/:id', (req, res) => {
   const db = req.app.locals.db;
   const categoryId = req.params.id;

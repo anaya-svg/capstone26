@@ -129,7 +129,6 @@ function UserManagement() {
     }
   }
 
-
   const fetchUsers = async () => {
     try {
       const params = new URLSearchParams()

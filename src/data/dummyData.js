@@ -1,5 +1,3 @@
-// Dummy data for dropdowns (to be replaced with real data from other menus)
-
 export const boothSetupOptions = [
   'Photobooth Standard',
   'Photobooth Premium',

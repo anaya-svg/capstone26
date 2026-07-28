@@ -19,8 +19,6 @@ function extractToken(req) {
 
 function requireAuth(req, res, next) {
   const token = extractToken(req);
-  // Grace period: allow read-only (GET) access without auth so existing frontend keeps working.
-  // TODO: remove this once frontend sends Authorization header.
   if (!token) {
     if (req.method === 'GET') return next();
     return res.status(401).json({ success: false, message: 'Unauthorized: token missing' });

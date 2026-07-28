@@ -48,7 +48,6 @@ function SessionGuard() {
         })
 
         if (!response.ok) {
-          // Only clear storage if the token we just checked is still the current one
           const latestData = sessionStorage.getItem('user')
           const latestUser = latestData ? JSON.parse(latestData) : null
           if (latestUser?.session_token !== currentToken) return
@@ -66,7 +65,7 @@ function SessionGuard() {
     }
 
     verifySession()
-    intervalRef.current = setInterval(verifySession, 15000) // check every 15 seconds
+    intervalRef.current = setInterval(verifySession, 15000)
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)

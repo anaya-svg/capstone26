@@ -308,9 +308,6 @@ export default function Promotions({ isOpen, onClose }) {
     return matchesSearch && matchesStatus
   })
 
-  // Pagination logic
-  const totalItems = filteredPromotions.length
-  const totalPages = Math.ceil(totalItems / itemsPerPage)
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = filteredPromotions.slice(indexOfFirstItem, indexOfLastItem)

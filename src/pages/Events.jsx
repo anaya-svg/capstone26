@@ -140,7 +140,7 @@ function Events() {
   const [addonBackup, setAddonBackup] = useState(null)
   const [packageWizardBackup, setPackageWizardBackup] = useState(null)
   const [showInventorySearch, setShowInventorySearch] = useState(false)
-  const [inventorySearchType, setInventorySearchType] = useState('') // 'backdrop' or 'print'
+  const [inventorySearchType, setInventorySearchType] = useState('')
   const [inventorySearch, setInventorySearch] = useState('')
   const [inventoryResults, setInventoryResults] = useState([])
   
@@ -517,7 +517,7 @@ function Events() {
       return newErrors
     })
     setShowPackageDetailsModal(false)
-    setPackageWizardBackup(null) // Commit successful selection!
+    setPackageWizardBackup(null)
   }
 
   const handleOpenSelectPackageModal = () => {
@@ -564,7 +564,6 @@ function Events() {
     else if (data.package_name === 'Paket Platinum Luxury') total = 1499000
     else if (data.package_name === 'Paket Custom Agreement') total = Number(data.custom_base_price) || 0
 
-    // Add-ons (Negotiable pricing when chosen package is Paket Custom Agreement)
     const isCustom = data.package_name === 'Paket Custom Agreement'
     const hoursPrice = isCustom ? (data.custom_extra_hours_price !== undefined ? Number(data.custom_extra_hours_price) : 150000) : 150000
     const backdropPrice = isCustom ? (data.custom_backdrop_price !== undefined ? Number(data.custom_backdrop_price) : 250000) : 250000
@@ -584,17 +583,14 @@ function Events() {
   const recalculatePromoDiscount = (promo, subtotal, packageName, date) => {
     if (!promo) return { discount: 0, error: '' }
 
-    // 1. Check applicability
     if (promo.applicable_to !== 'all' && promo.applicable_to !== 'off_site') {
       return { discount: 0, error: `Promo ini hanya berlaku untuk transaksi In-Studio!` }
     }
 
-    // 2. Check min spending limit
     if (subtotal < Number(promo.min_transaction)) {
       return { discount: 0, error: `Belum mencapai minimum transaksi Rp ${new Intl.NumberFormat('id-ID').format(promo.min_transaction)}` }
     }
 
-    // 3. Check dates
     const transactionDate = date ? new Date(date) : new Date()
     const startDate = new Date(promo.start_date)
     const endDate = new Date(promo.end_date)
@@ -606,7 +602,6 @@ function Events() {
       return { discount: 0, error: 'Promo sudah tidak berlaku di tanggal ini!' }
     }
 
-    // 4. Weekday slump
     if (promo.eligibility_type === 'weekday_slump' && promo.day_restrictions) {
       const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
       const dayName = weekdays[transactionDate.getDay()]
@@ -615,7 +610,6 @@ function Events() {
       }
     }
 
-    // 5. Package bundling
     if (promo.eligibility_type === 'package_bundling' && promo.target_package_name) {
       if (!packageName || packageName.toLowerCase() !== promo.target_package_name.toLowerCase()) {
         return { discount: 0, error: `Hanya valid untuk paket ${promo.target_package_name}` }
@@ -873,7 +867,7 @@ function Events() {
             promo_id: event.promo_id,
             promo_code: event.promo_code,
             promo_name: event.promo_name,
-            discount_type: 'flat', // Placeholder
+            discount_type: 'flat',
             discount_value: event.discount_amount
           })
         } else {
@@ -882,7 +876,6 @@ function Events() {
           setActivePromo(null)
         }
         setCouponError('')
-        // Parse assets from array format
         if (event.assets && Array.isArray(event.assets) && event.assets.length > 0) {
           const parsedAssets = event.assets.map(asset => ({
             asset_id: asset.asset_id,
@@ -968,7 +961,6 @@ function Events() {
     const updated = [...assetAssignments]
     updated[index][field] = value
     
-    // If name is changed, find the asset and get asset_id and quantity
     if (field === 'name') {
       const asset = assets.find(a => a.name === value)
       if (asset) {
@@ -1027,7 +1019,6 @@ function Events() {
     })
     setAssetAssignments(updated)
     
-    // Filter out the resolved conflict from assetConflicts state
     const remainingConflicts = assetConflicts.filter(c => c.asset_id !== conflictedAssetId)
     setAssetConflicts(remainingConflicts)
     if (remainingConflicts.length === 0) {
@@ -1045,7 +1036,6 @@ function Events() {
       return
     }
 
-    // Check for asset conflicts
     const hasConflicts = await checkAssetConflicts()
     if (hasConflicts) {
       return
@@ -1108,7 +1098,6 @@ function Events() {
       return
     }
 
-    // Check for asset conflicts
     const hasConflicts = await checkAssetConflicts()
     if (hasConflicts) {
       return
@@ -1155,7 +1144,7 @@ function Events() {
     if (!formData.location) {
       errors.location = 'Location is required'
     }
-    // Skip customer validation when editing
+
     if (!selectedEvent) {
       if (!customerSearchTerm) {
         errors.customer = 'Customer is required'

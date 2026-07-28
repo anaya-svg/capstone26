@@ -11,7 +11,6 @@ export default {
         sans: ['Urbanist', 'sans-serif'],
       },
       colors: {
-        // 70% Blue, 20% Yellow, 10% Red palette
         blue: {
           50: '#eff6ff',
           100: '#dbeafe',

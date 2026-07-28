@@ -19,11 +19,9 @@ export const exportToExcel = async (headers, data, title, fileName, options = {}
 
   const headerRow = filterSummary ? 5 : (options.headerRow || 4)
 
-  // Create workbook
   const workbook = new ExcelJS.Workbook()
   const worksheet = workbook.addWorksheet('Report')
 
-  // Define styles
   const headerStyle = {
     font: { bold: true, size: 11, color: { argb: 'FFFFFFFF' } },
     fill: {
@@ -66,21 +64,18 @@ export const exportToExcel = async (headers, data, title, fileName, options = {}
     }
   }
 
-  // Add company name
   worksheet.mergeCells('A1:Z1')
   const companyCell = worksheet.getCell('A1')
   companyCell.value = 'SnapFun Studio'
   companyCell.style = titleStyle
   worksheet.getRow(1).height = 25
 
-  // Add report title
   worksheet.mergeCells('A2:Z2')
   const titleCell = worksheet.getCell('A2')
   titleCell.value = title
   titleCell.style = subtitleStyle
   worksheet.getRow(2).height = 20
 
-  // Add generated date
   worksheet.mergeCells('A3:Z3')
   const dateCell = worksheet.getCell('A3')
   dateCell.value = `Generated: ${new Date().toLocaleDateString('id-ID', { 
@@ -94,7 +89,6 @@ export const exportToExcel = async (headers, data, title, fileName, options = {}
   dateCell.style = dateStyle
   worksheet.getRow(3).height = 18
 
-  // Add filter summary if provided
   if (filterSummary) {
     worksheet.mergeCells('A4:Z4')
     const filterCell = worksheet.getCell('A4')
@@ -103,17 +97,14 @@ export const exportToExcel = async (headers, data, title, fileName, options = {}
     worksheet.getRow(4).height = 18
   }
 
-  // Add empty row
   worksheet.addRow([])
 
-  // Add headers
   const headerRowObj = worksheet.addRow(headers)
   headerRowObj.eachCell((cell) => {
     cell.style = headerStyle
   })
   worksheet.getRow(headerRow).height = 22
 
-  // Add data rows
   data.forEach((row) => {
     const dataRow = worksheet.addRow(row)
     dataRow.eachCell((cell) => {
@@ -121,13 +112,11 @@ export const exportToExcel = async (headers, data, title, fileName, options = {}
     })
   })
 
-  // Set column widths
   if (columnWidths) {
     columnWidths.forEach((width, index) => {
       worksheet.getColumn(index + 1).width = width
     })
   } else {
-    // Auto-fit columns
     worksheet.columns.forEach((column) => {
       let maxLength = 0
       column.eachCell({ includeEmpty: true }, (cell) => {
@@ -140,12 +129,10 @@ export const exportToExcel = async (headers, data, title, fileName, options = {}
     })
   }
 
-  // Freeze header row
   worksheet.views = [
     { state: 'frozen', ySplit: headerRow }
   ]
 
-  // Generate and download
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], { 
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 

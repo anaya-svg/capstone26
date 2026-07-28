@@ -4,7 +4,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Configure multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '../pr_attachment');
@@ -55,7 +54,7 @@ function validateItemsForSubmission(items) {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024
   },
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -70,7 +69,6 @@ const upload = multer({
   }
 });
 
-// Get all procurement requests
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
   const { status, date, search, page = 1, limit = 10 } = req.query;
@@ -134,7 +132,6 @@ router.get('/', (req, res) => {
   query += ' GROUP BY pr.pr_id ORDER BY pr.created_at DESC';
   query += ` LIMIT ${limitNum} OFFSET ${offset}`;
 
-  // Get total count
   db.query(countQuery, countParams, (err, countResult) => {
     if (err) {
       return res.status(500).json({
@@ -145,7 +142,6 @@ router.get('/', (req, res) => {
 
     const total = countResult[0].total;
 
-    // Get paginated data
     db.query(query, params, (err, results) => {
       if (err) {
         return res.status(500).json({
@@ -154,13 +150,11 @@ router.get('/', (req, res) => {
         });
       }
 
-      // Parse items string to array
       const parsedResults = results.map(request => {
         if (request.items) {
           request.items = request.items.split(';').map(itemStr => {
             const [classification, name, assetId, quantity, cost, charge, addCost, totalCost, assetStatus] = itemStr.split('|');
             let itemName = name;
-            // Add "Item Deleted" annotation for deleted assets
             if (assetStatus === 'Deleted') {
               itemName = `${name} - Item Deleted`;
             }
@@ -193,7 +187,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// GET all procurement requests for export (supports multi-select filters, no pagination)
 router.get('/export', (req, res) => {
   const db = req.app.locals.db;
   const { status, createdAt, search } = req.query;
@@ -300,7 +293,6 @@ router.get('/export', (req, res) => {
   });
 });
 
-// Get procurement summary
 router.get('/summary', (req, res) => {
   const db = req.app.locals.db;
 
@@ -328,7 +320,6 @@ router.get('/summary', (req, res) => {
   });
 });
 
-// Auto-create draft procurement request from inventory low-stock item
 router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
   const db = req.app.locals.db;
   const { item_id } = req.params;
@@ -511,7 +502,6 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
   });
 });
 
-// Get single procurement request
 router.get('/:pr_id', (req, res) => {
   const db = req.app.locals.db;
   const { pr_id } = req.params;
@@ -551,13 +541,11 @@ router.get('/:pr_id', (req, res) => {
       });
     }
 
-    // Parse items string to array
     const request = results[0];
     if (request.items) {
       request.items = request.items.split(';').map(itemStr => {
         const [classification, name, assetId, quantity, cost, charge, addCost, totalCost, assetStatus] = itemStr.split('|');
         let itemName = name;
-        // Add "Item Deleted" annotation for deleted assets
         if (assetStatus === 'Deleted') {
           itemName = `${name} - Item Deleted`;
         }
@@ -583,7 +571,6 @@ router.get('/:pr_id', (req, res) => {
   });
 });
 
-// Create new procurement request
 router.post('/', upload.single('attachment'), (req, res) => {
   const db = req.app.locals.db;
   const {
@@ -594,7 +581,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
     status
   } = req.body;
 
-  // Parse items from JSON string if needed
   let parsedItems = items;
   if (typeof items === 'string') {
     try {
@@ -607,10 +593,8 @@ router.post('/', upload.single('attachment'), (req, res) => {
     }
   }
 
-  // Get attachment path if file was uploaded
   const attachment = req.file ? `/uploads/${req.file.filename}` : null;
 
-  // Validate items array
   if (!parsedItems || !Array.isArray(parsedItems) || parsedItems.length === 0) {
     return res.status(400).json({
       success: false,
@@ -629,7 +613,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
     }
   }
 
-  // Calculate total cost from all items
   let total_cost = 0;
   parsedItems.forEach(item => {
     const quantity = parseInt(item.quantity);
@@ -639,7 +622,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
     total_cost += itemTotal;
   });
 
-  // Generate base_id - get the maximum base_id and increment
   const query = 'SELECT base_id FROM procurement_requests ORDER BY base_id DESC LIMIT 1';
   db.query(query, (err, results) => {
     if (err) {
@@ -660,7 +642,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
   });
 
   function insertPR(base_id, retryCount = 0) {
-    // Safety limit to prevent infinite recursion
     if (retryCount > 50) {
       return res.status(500).json({
         success: false,
@@ -668,7 +649,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
       });
     }
 
-    // Generate pr_id based on status
     let pr_id;
     if (status === 'Approved') {
       pr_id = 'PO' + base_id.toString().padStart(5, '0');
@@ -691,7 +671,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
     ], (err, result) => {
       if (err) {
         console.error('SQL Error:', err);
-        // If duplicate key error, try with incremented base_id
         if (err.code === 'ER_DUP_ENTRY') {
           base_id++;
           insertPR(base_id, retryCount + 1);
@@ -703,7 +682,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
         });
       }
 
-      // Insert items
       insertItems(pr_id, parsedItems);
     });
   }
@@ -729,14 +707,10 @@ router.post('/', upload.single('attachment'), (req, res) => {
       let assetId = null;
       let itemName = item.item_name;
 
-      // If classification is Assets, look up asset_id
       if (item.item_classification === 'Assets') {
-        // Check if item_name is an asset_id (starts with AST-)
         if (item.item_name && item.item_name.startsWith('AST-')) {
           assetId = item.item_name;
-          // Keep itemName for display purposes
         } else {
-          // Look up asset_id by name
           const lookupQuery = 'SELECT asset_id FROM assets WHERE name = ?';
           db.query(lookupQuery, [item.item_name], (err, results) => {
             if (err) {
@@ -749,7 +723,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
           return;
         }
       } 
-      // If classification is Supplies, look up item_id
       else if (item.item_classification === 'Supplies') {
         const lookupQuery = 'SELECT item_id FROM inventory WHERE item_name = ? AND status = "active"';
         db.query(lookupQuery, [item.item_name], (err, results) => {
@@ -787,7 +760,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
       }
     }
 
-    // Handle case where items array is empty
     if (totalItems === 0) {
       res.json({
         success: true,
@@ -798,7 +770,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
   }
 });
 
-// Update procurement request
 router.put('/:pr_id', upload.single('attachment'), (req, res) => {
   const db = req.app.locals.db;
   const { pr_id } = req.params;
@@ -810,7 +781,6 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
     status
   } = req.body;
 
-  // Parse items from JSON string if needed
   let parsedItems = items;
   if (typeof items === 'string') {
     try {
@@ -823,13 +793,11 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
     }
   }
 
-  // Get attachment path if file was uploaded, otherwise keep existing
   let attachment = req.file ? `/uploads/${req.file.filename}` : null;
   if (!attachment && req.body.existing_attachment) {
     attachment = req.body.existing_attachment;
   }
 
-  // Validate items array
   if (!parsedItems || !Array.isArray(parsedItems) || parsedItems.length === 0) {
     return res.status(400).json({
       success: false,
@@ -837,7 +805,6 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
     });
   }
 
-  // Calculate total cost from all items
   let total_cost = 0;
   parsedItems.forEach(item => {
     const quantity = parseInt(item.quantity);
@@ -863,7 +830,6 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
       });
     }
 
-    // Delete existing items
     db.query('DELETE FROM procurement_request_items WHERE pr_id = ?', [pr_id], (err) => {
       if (err) {
         return res.status(500).json({
@@ -872,7 +838,6 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
         });
       }
 
-      // Insert new items
       insertItems(pr_id, parsedItems);
     });
   });
@@ -898,14 +863,10 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
       let assetId = null;
       let itemName = item.item_name;
 
-      // If classification is Assets, look up asset_id
       if (item.item_classification === 'Assets') {
-        // Check if item_name is an asset_id (starts with AST-)
         if (item.item_name && item.item_name.startsWith('AST-')) {
           assetId = item.item_name;
-          // Keep itemName for display purposes
         } else {
-          // Look up asset_id by name
           const lookupQuery = 'SELECT asset_id FROM assets WHERE name = ?';
           db.query(lookupQuery, [item.item_name], (err, results) => {
             if (err) {
@@ -918,7 +879,6 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
           return;
         }
       } 
-      // If classification is Supplies, look up item_id
       else if (item.item_classification === 'Supplies') {
         const lookupQuery = 'SELECT item_id FROM inventory WHERE item_name = ? AND status = "active"';
         db.query(lookupQuery, [item.item_name], (err, results) => {
@@ -955,7 +915,6 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
       }
     }
 
-    // Handle case where items array is empty
     if (totalItems === 0) {
       res.json({
         success: true,
@@ -965,13 +924,11 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
   }
 });
 
-// Update procurement request status
 router.patch('/:pr_id/status', (req, res) => {
   const db = req.app.locals.db;
   const { pr_id } = req.params;
   const { status, rejection_reason } = req.body;
 
-  // Get current request details
   const getQuery = 'SELECT base_id, status as current_status FROM procurement_requests WHERE pr_id = ?';
   db.query(getQuery, [pr_id], (err, results) => {
     if (err) {
@@ -991,7 +948,6 @@ router.patch('/:pr_id/status', (req, res) => {
     let base_id = request.base_id;
 
     const continueStatusUpdate = () => {
-      // Handle special case: Waiting Approval → Reject (move to Draft with rejected_from_waiting flag)
       if (request.current_status === 'Waiting Approval' && status === 'Rejected') {
         const updateQuery = `
           UPDATE procurement_requests
@@ -1013,14 +969,12 @@ router.patch('/:pr_id/status', (req, res) => {
         return;
       }
 
-      // Generate new pr_id based on status
       let new_pr_id = '';
       if (status === 'Approved') {
         new_pr_id = 'PO' + base_id.toString().padStart(5, '0');
       } else if (status === 'Received') {
         new_pr_id = 'GR' + base_id.toString().padStart(5, '0');
       } else if (status === 'Rejected' || status === 'Draft') {
-        // Keep current prefix or revert to PR
         if (request.current_status === 'Approved') {
           new_pr_id = 'PO' + base_id.toString().padStart(5, '0');
         } else if (request.current_status === 'Received') {
@@ -1032,7 +986,6 @@ router.patch('/:pr_id/status', (req, res) => {
         new_pr_id = 'PR' + base_id.toString().padStart(5, '0');
       }
 
-      // If changing from Received to Rejected, decrease quantities
       if (request.current_status === 'Received' && status === 'Rejected') {
         decreaseQuantitiesOnDelete(pr_id, (err) => {
           if (err) {
@@ -1045,7 +998,6 @@ router.patch('/:pr_id/status', (req, res) => {
       }
 
       function proceedWithStatusUpdate() {
-        // Disable foreign key checks temporarily
         db.query('SET FOREIGN_KEY_CHECKS = 0', (err) => {
           if (err) {
             console.error('Error disabling FK checks:', err);
@@ -1055,11 +1007,9 @@ router.patch('/:pr_id/status', (req, res) => {
             });
           }
 
-          // Update procurement_request_items pr_id first, then update procurement_requests
           updateItemsPrId(pr_id, new_pr_id, (err) => {
             if (err) {
               console.error('Error updating items pr_id:', err);
-              // Re-enable FK checks before returning error
               db.query('SET FOREIGN_KEY_CHECKS = 1');
               return res.status(500).json({
                 success: false,
@@ -1067,18 +1017,12 @@ router.patch('/:pr_id/status', (req, res) => {
               });
             }
 
-            // Now update procurement_requests with new pr_id
-            const updateQuery = 'UPDATE procurement_requests SET status = ?, pr_id = ?, base_id = ?, rejection_reason = ? WHERE pr_id = ?';
             db.query(updateQuery, [status, new_pr_id, base_id, rejection_reason || null, pr_id], (err, result) => {
-              // Re-enable FK checks
               db.query('SET FOREIGN_KEY_CHECKS = 1');
 
               if (err) {
                 console.error('SQL Error:', err);
-                // If duplicate key error, try with incremented base_id
                 if (err.code === 'ER_DUP_ENTRY') {
-                  base_id++;
-                  // Recalculate new pr_id with incremented base_id
                   if (status === 'Approved') {
                     new_pr_id = 'PO' + base_id.toString().padStart(5, '0');
                   } else if (status === 'Received') {
@@ -1095,7 +1039,6 @@ router.patch('/:pr_id/status', (req, res) => {
                     new_pr_id = 'PR' + base_id.toString().padStart(5, '0');
                   }
 
-                  // Disable FK checks again for retry
                   db.query('SET FOREIGN_KEY_CHECKS = 0', (err) => {
                     if (err) {
                       console.error('Error disabling FK checks (retry):', err);
@@ -1105,7 +1048,6 @@ router.patch('/:pr_id/status', (req, res) => {
                       });
                     }
 
-                    // Update items again with new pr_id
                     updateItemsPrId(pr_id, new_pr_id, (err2) => {
                       if (err2) {
                         console.error('Error updating items pr_id (retry):', err2);
@@ -1115,7 +1057,6 @@ router.patch('/:pr_id/status', (req, res) => {
                           message: 'Error updating procurement request items: ' + err2.message
                         });
                       }
-                      // Retry update
                       db.query(updateQuery, [status, new_pr_id, base_id, rejection_reason || null, pr_id], (err3, result3) => {
                         db.query('SET FOREIGN_KEY_CHECKS = 1');
                         if (err3) {
@@ -1139,8 +1080,7 @@ router.patch('/:pr_id/status', (req, res) => {
                   });
                 }
               }
-              // If status changed to Received, update quantities
-              if (status === 'Received') {
+      if (status === 'Received') {
                 updateQuantitiesOnReceived(new_pr_id, (err) => {
                   if (err) console.error('Error updating quantities:', err);
                 });
@@ -1197,7 +1137,6 @@ router.patch('/:pr_id/status', (req, res) => {
     });
   }
 
-  // Update inventory/assets quantity when status changes to Received
   function updateQuantitiesOnReceived(pr_id, callback) {
     const getItemsQuery = 'SELECT * FROM procurement_request_items WHERE pr_id = ?';
     db.query(getItemsQuery, [pr_id], (err, items) => {
@@ -1215,7 +1154,6 @@ router.patch('/:pr_id/status', (req, res) => {
 
       items.forEach(item => {
         if (item.item_classification === 'Supplies' && item.item_id) {
-          // Update inventory stock_quantity and recalculate stock_status
           const updateInventoryQuery = `
             UPDATE inventory 
             SET stock_quantity = stock_quantity + ?,
@@ -1232,7 +1170,6 @@ router.patch('/:pr_id/status', (req, res) => {
             if (updatedCount === totalItems) callback(null);
           });
         } else if (item.item_classification === 'Assets' && item.asset_id) {
-          // Update assets quantity
           const updateAssetsQuery = 'UPDATE assets SET quantity = quantity + ? WHERE asset_id = ?';
           db.query(updateAssetsQuery, [item.quantity, item.asset_id], (err) => {
             if (err) console.error('Error updating assets quantity:', err);
@@ -1240,7 +1177,6 @@ router.patch('/:pr_id/status', (req, res) => {
             if (updatedCount === totalItems) callback(null);
           });
         } else {
-          // No update needed (item_id or asset_id not found)
           updatedCount++;
           if (updatedCount === totalItems) callback(null);
         }
@@ -1248,7 +1184,6 @@ router.patch('/:pr_id/status', (req, res) => {
     });
   }
 
-  // Decrease inventory/assets quantity when GR is deleted
   function decreaseQuantitiesOnDelete(pr_id, callback) {
     const getItemsQuery = 'SELECT * FROM procurement_request_items WHERE pr_id = ?';
     db.query(getItemsQuery, [pr_id], (err, items) => {
@@ -1266,7 +1201,6 @@ router.patch('/:pr_id/status', (req, res) => {
 
       items.forEach(item => {
         if (item.item_classification === 'Supplies' && item.item_id) {
-          // Decrease inventory stock_quantity and recalculate stock_status
           const updateInventoryQuery = `
             UPDATE inventory 
             SET stock_quantity = stock_quantity - ?,
@@ -1283,7 +1217,6 @@ router.patch('/:pr_id/status', (req, res) => {
             if (updatedCount === totalItems) callback(null);
           });
         } else if (item.item_classification === 'Assets' && item.asset_id) {
-          // Decrease assets quantity
           const updateAssetsQuery = 'UPDATE assets SET quantity = quantity - ? WHERE asset_id = ?';
           db.query(updateAssetsQuery, [item.quantity, item.asset_id], (err) => {
             if (err) console.error('Error decreasing assets quantity:', err);
@@ -1291,7 +1224,6 @@ router.patch('/:pr_id/status', (req, res) => {
             if (updatedCount === totalItems) callback(null);
           });
         } else {
-          // No update needed (item_id or asset_id not found)
           updatedCount++;
           if (updatedCount === totalItems) callback(null);
         }
@@ -1300,7 +1232,6 @@ router.patch('/:pr_id/status', (req, res) => {
   }
 });
 
-// Decrease inventory/assets quantity when GR is deleted (global function for DELETE route)
 function decreaseQuantitiesOnDeleteGlobal(db, pr_id, callback) {
   const getItemsQuery = 'SELECT * FROM procurement_request_items WHERE pr_id = ?';
   db.query(getItemsQuery, [pr_id], (err, items) => {
@@ -1318,7 +1249,6 @@ function decreaseQuantitiesOnDeleteGlobal(db, pr_id, callback) {
 
     items.forEach(item => {
       if (item.item_classification === 'Supplies' && item.item_id) {
-        // Decrease inventory stock_quantity and recalculate stock_status
         const updateInventoryQuery = `
           UPDATE inventory 
           SET stock_quantity = stock_quantity - ?,
@@ -1335,7 +1265,6 @@ function decreaseQuantitiesOnDeleteGlobal(db, pr_id, callback) {
           if (updatedCount === totalItems) callback(null);
         });
       } else if (item.item_classification === 'Assets' && item.asset_id) {
-        // Decrease assets quantity
         const updateAssetsQuery = 'UPDATE assets SET quantity = quantity - ? WHERE asset_id = ?';
         db.query(updateAssetsQuery, [item.quantity, item.asset_id], (err) => {
           if (err) console.error('Error decreasing assets quantity:', err);
@@ -1343,7 +1272,6 @@ function decreaseQuantitiesOnDeleteGlobal(db, pr_id, callback) {
           if (updatedCount === totalItems) callback(null);
         });
       } else {
-        // No update needed (item_id or asset_id not found)
         updatedCount++;
         if (updatedCount === totalItems) callback(null);
       }
@@ -1351,13 +1279,11 @@ function decreaseQuantitiesOnDeleteGlobal(db, pr_id, callback) {
   });
 }
 
-// Delete procurement request
 router.delete('/:pr_id', (req, res) => {
   const db = req.app.locals.db;
   const { pr_id } = req.params;
   const { status, rejection_reason } = req.query;
 
-  // If status is provided and it's for Received status, move to Rejected with "deleted" flag and keep GR prefix
   if (status === 'deleted') {
     const getQuery = 'SELECT base_id FROM procurement_requests WHERE pr_id = ?';
     db.query(getQuery, [pr_id], (err, results) => {
@@ -1377,7 +1303,6 @@ router.delete('/:pr_id', (req, res) => {
       const base_id = results[0].base_id;
       const new_pr_id = 'GR' + base_id.toString().padStart(5, '0');
 
-      // Decrease quantities before moving to Rejected
       decreaseQuantitiesOnDeleteGlobal(db, pr_id, (err) => {
         if (err) {
           console.error('Error decreasing quantities on delete:', err);
@@ -1399,7 +1324,6 @@ router.delete('/:pr_id', (req, res) => {
       });
     });
   } else {
-    // Regular delete (for Draft status)
     const query = 'DELETE FROM procurement_requests WHERE pr_id = ?';
 
     db.query(query, [pr_id], (err, result) => {

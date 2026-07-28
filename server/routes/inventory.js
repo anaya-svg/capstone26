@@ -4,7 +4,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Configure multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '../inventory_attachments');
@@ -22,7 +21,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024
   },
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -37,7 +36,6 @@ const upload = multer({
   }
 });
 
-// GET all inventory items
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
   const { search, status, page = 1, limit = 10 } = req.query;
@@ -97,7 +95,6 @@ router.get('/', (req, res) => {
   const params = [];
   const countParams = [];
 
-  // Filter by status (active/drafted)
   if (status) {
     query += ' AND i.status = ?';
     countQuery += ' AND i.status = ?';
@@ -105,7 +102,6 @@ router.get('/', (req, res) => {
     countParams.push(status);
   }
 
-  // Filter by stock status (in_stock/low_stock/out_of_stock)
   if (req.query.stock_status) {
     if (req.query.stock_status === 'low_or_out_of_stock') {
       query += ' AND (i.stock_status = ? OR i.stock_status = ?)';
@@ -120,7 +116,6 @@ router.get('/', (req, res) => {
     }
   }
 
-  // Search by item name
   if (search) {
     query += ' AND i.item_name LIKE ?';
     countQuery += ' AND i.item_name LIKE ?';
@@ -131,7 +126,6 @@ router.get('/', (req, res) => {
   query += ' ORDER BY i.created_at DESC';
   query += ` LIMIT ${limitNum} OFFSET ${offset}`;
 
-  // Get total count
   db.query(countQuery, countParams, (err, countResult) => {
     if (err) {
       console.error('Error counting inventory:', err);
@@ -143,7 +137,6 @@ router.get('/', (req, res) => {
 
     const total = countResult[0].total;
 
-    // Get paginated data
     db.query(query, params, (err, results) => {
       if (err) {
         console.error('Error fetching inventory:', err);
@@ -165,7 +158,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// GET all inventory items for export (supports multi-select filters, no pagination)
 router.get('/export', (req, res) => {
   const db = req.app.locals.db;
   const { stock_status, search } = req.query;
@@ -238,7 +230,6 @@ router.get('/export', (req, res) => {
   });
 });
 
-// GET inventory summary
 router.get('/summary', (req, res) => {
   const db = req.app.locals.db;
 
@@ -267,7 +258,6 @@ router.get('/summary', (req, res) => {
   });
 });
 
-// GET low stock items
 router.get('/low-stock', (req, res) => {
   const db = req.app.locals.db;
   const { status } = req.query;
@@ -305,7 +295,6 @@ router.get('/low-stock', (req, res) => {
   });
 });
 
-// PUT recalculate stock status for all items
 router.put('/recalculate-stock-status', (req, res) => {
   const db = req.app.locals.db;
 
@@ -335,7 +324,6 @@ router.put('/recalculate-stock-status', (req, res) => {
   });
 });
 
-// PUT recalculate stock status for all items (must be before /:id route)
 router.put('/recalculate-stock-status', (req, res) => {
   const db = req.app.locals.db;
 
@@ -365,7 +353,6 @@ router.put('/recalculate-stock-status', (req, res) => {
   });
 });
 
-// GET single inventory item by ID
 router.get('/:id', (req, res) => {
   const db = req.app.locals.db;
   const itemId = req.params.id;
@@ -437,14 +424,12 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// POST create new inventory item
 router.post('/', upload.single('attachment'), (req, res) => {
   const db = req.app.locals.db;
   const { item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, status } = req.body;
   const itemStatus = status || 'active';
   const attachment = req.file ? 'inventory_attachments/' + req.file.filename : null;
 
-  // Check for duplicate item name (case-insensitive)
   const checkDuplicateQuery = `SELECT item_id FROM inventory WHERE LOWER(item_name) = LOWER(?) AND status = 'active'`;
   db.query(checkDuplicateQuery, [item_name], (err, duplicateResult) => {
     if (err) {
@@ -462,7 +447,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
       });
     }
 
-    // Determine stock status based on quantity and minimum stock
     const stockQty = Number(stock_quantity);
     const minStock = Number(minimum_stock);
     let stock_status = 'in_stock';
@@ -474,7 +458,6 @@ router.post('/', upload.single('attachment'), (req, res) => {
       stock_status = 'in_stock';
     }
 
-    // First check if attachment column exists
     db.query(`SHOW COLUMNS FROM inventory LIKE 'attachment'`, (err, result) => {
       if (err) {
         console.error('Error checking attachment column:', err);
@@ -527,17 +510,14 @@ router.post('/', upload.single('attachment'), (req, res) => {
   });
 });
 
-// PUT update inventory item
 router.put('/:id', upload.single('attachment'), (req, res) => {
   const db = req.app.locals.db;
   const itemId = req.params.id;
   const { item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor } = req.body;
 
-  // Convert to numbers for proper comparison
   const stockQty = Number(stock_quantity);
   const minStock = Number(minimum_stock);
 
-  // Check for duplicate item name (case-insensitive) excluding current item
   const checkDuplicateQuery = `SELECT item_id FROM inventory WHERE LOWER(item_name) = LOWER(?) AND item_id != ? AND status = 'active'`;
   db.query(checkDuplicateQuery, [item_name, itemId], (err, duplicateResult) => {
     if (err) {
@@ -555,7 +535,6 @@ router.put('/:id', upload.single('attachment'), (req, res) => {
       });
     }
 
-    // Get existing attachment to keep if no new file uploaded
     db.query('SELECT attachment FROM inventory WHERE item_id = ?', [itemId], (err, results) => {
       if (err) {
         console.error('Error fetching existing item:', err);
@@ -575,7 +554,6 @@ router.put('/:id', upload.single('attachment'), (req, res) => {
       const existingAttachment = results[0].attachment;
       const attachment = req.file ? 'inventory_attachments/' + req.file.filename : existingAttachment;
 
-      // Determine stock status based on quantity and minimum stock
       let stock_status = 'in_stock';
       
       if (stockQty === 0) {
@@ -617,7 +595,6 @@ router.put('/:id', upload.single('attachment'), (req, res) => {
   });
 });
 
-// DELETE inventory item (hard delete)
 router.delete('/:id', (req, res) => {
   const db = req.app.locals.db;
   const itemId = req.params.id;
@@ -647,7 +624,6 @@ router.delete('/:id', (req, res) => {
   });
 });
 
-// PUT draft inventory item
 router.put('/:id/draft', (req, res) => {
   const db = req.app.locals.db;
   const itemId = req.params.id;

@@ -26,11 +26,8 @@ function Sidebar({ userRole, userName, isSidebarOpen, setIsSidebarOpen }) {
       }
     }
 
-    // Clear chat history from sessionStorage
     sessionStorage.removeItem('snapfunny_chat_history')
-    // Clear user from sessionStorage
     sessionStorage.removeItem('user')
-    // Navigate to login
     navigate('/login')
   }
 

@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// GET all booth setups
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
 
@@ -23,7 +22,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST new booth setup
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const { booth_setup_name } = req.body;

@@ -520,7 +520,6 @@ function Inventory() {
   const handleEditItem = (item) => {
     setSelectedItem(item)
     
-    // Find vendor_id if vendor exists in vendors list (prioritize last used procurement vendor)
     const activeVendor = item.last_procurement_vendor || item.vendor || ''
     const existingVendor = vendors.find(v => v.vendor_name === activeVendor)
     
@@ -826,7 +825,6 @@ function Inventory() {
     
     setFormErrors(errors)
     
-    // If there are errors, show missing data modal
     if (Object.keys(errors).length > 0) {
       setShowMissingDataModal(true)
       return false

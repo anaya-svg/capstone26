@@ -1,23 +1,17 @@
 const express = require('express');
 const router = express.Router();
 
-// GET dashboard summary data
 router.get('/summary', (req, res) => {
   const db = req.app.locals.db;
 
-  // Get total assets (excluding deleted assets)
   const totalAssetsQuery = `SELECT COUNT(*) as count FROM assets WHERE status NOT IN ('Deleted', 'Deleted Draft')`;
 
-  // Get low stock items count
   const lowStockQuery = `SELECT COUNT(*) as count FROM inventory WHERE stock_quantity <= minimum_stock`;
 
-  // Get upcoming events count
   const upcomingEventsQuery = `SELECT COUNT(*) as count FROM events WHERE status IN ('upcoming', 'in_progress')`;
 
-  // Get total customers
   const totalCustomersQuery = `SELECT COUNT(*) as count FROM customers`;
 
-  // Get customer segmentation
   const customerSegmentationQuery = `
     SELECT 
       SUM(CASE WHEN is_in_studio = TRUE THEN 1 ELSE 0 END) as in_studio,
@@ -25,7 +19,6 @@ router.get('/summary', (req, res) => {
     FROM customers
   `;
 
-  // Get total revenue from in-studio visits and off-site events (in_progress or completed)
   const totalRevenueQuery = `
     SELECT (
       SELECT COALESCE(SUM(spending), 0) FROM customer_visits
@@ -92,7 +85,6 @@ router.get('/summary', (req, res) => {
   });
 });
 
-// GET asset status distribution for pie chart
 router.get('/asset-status', (req, res) => {
   const db = req.app.locals.db;
 
@@ -116,7 +108,6 @@ router.get('/asset-status', (req, res) => {
   });
 });
 
-// GET asset usage by category for bar chart
 router.get('/asset-usage', (req, res) => {
   const db = req.app.locals.db;
 
@@ -144,11 +135,9 @@ router.get('/asset-usage', (req, res) => {
   });
 });
 
-// GET revenue trend for last 6 months + 3 months proactive AI projections (Cash Flow Forecasting)
 router.get('/revenue-trend', (req, res) => {
   const db = req.app.locals.db;
 
-  // 1. Get historical revenue trend for last 6 months
   const historicalQuery = `
     SELECT 
       month,
@@ -187,7 +176,6 @@ router.get('/revenue-trend', (req, res) => {
       return res.status(500).json({ success: false, message: 'Error fetching revenue trend' });
     }
 
-    // Map historical flag
     const historyData = historicalResults.map(r => ({
       ...r,
       in_studio_revenue: Number(r.in_studio_revenue) || 0,
@@ -196,13 +184,11 @@ router.get('/revenue-trend', (req, res) => {
       is_projection: false
     }));
 
-    // 2. Calculate moving average of In-Studio walk-in revenue over the last 3 months
     const last3Months = historyData.slice(-3);
     const avgInStudio = last3Months.length > 0 
       ? last3Months.reduce((sum, r) => sum + r.in_studio_revenue, 0) / last3Months.length 
-      : 5000000; // baseline fallback (5 million)
+      : 5000000; 
 
-    // 3. Query upcoming event bookings for the next 3 months to calculate projected off-site revenue
     const projectionQuery = `
       SELECT 
         DATE_FORMAT(start_date, '%Y-%m') as month,
@@ -221,13 +207,11 @@ router.get('/revenue-trend', (req, res) => {
         return res.status(500).json({ success: false, message: 'Error fetching projection trend' });
       }
 
-      // Create a map of projected off-site revenue by month
       const projMap = {};
       projectionResults.forEach(r => {
         projMap[r.month] = Number(r.off_site_revenue) || 0;
       });
 
-      // 4. Generate next 3 months dynamically and build the projections
       const projections = [];
       const now = new Date();
       for (let i = 1; i <= 3; i++) {
@@ -249,7 +233,6 @@ router.get('/revenue-trend', (req, res) => {
         });
       }
 
-      // Combine both history and projection arrays
       const finalTrend = [...historyData, ...projections];
 
       res.json({
@@ -260,7 +243,6 @@ router.get('/revenue-trend', (req, res) => {
   });
 });
 
-// GET low stock items
 router.get('/low-stock', (req, res) => {
   const db = req.app.locals.db;
 
@@ -293,7 +275,6 @@ router.get('/low-stock', (req, res) => {
   });
 });
 
-// GET upcoming events
 router.get('/upcoming-events', (req, res) => {
   const db = req.app.locals.db;
 
@@ -325,7 +306,6 @@ router.get('/upcoming-events', (req, res) => {
   });
 });
 
-// GET procurement status distribution for pie chart
 router.get('/procurement-status', (req, res) => {
   const db = req.app.locals.db;
 
@@ -350,7 +330,6 @@ router.get('/procurement-status', (req, res) => {
   });
 });
 
-// GET recent procurement requests
 router.get('/recent-procurement', (req, res) => {
   const db = req.app.locals.db;
 
@@ -380,7 +359,6 @@ router.get('/recent-procurement', (req, res) => {
   });
 });
 
-// Endpoint clear-all-data dihapus permanen; jika ada yang memanggil kembalikan 410 Gone
 router.post('/clear-all-data', (req, res) => {
   return res.status(410).json({ success: false, message: 'Endpoint removed' });
 });
@@ -388,9 +366,7 @@ router.post('/clear-all-data', (req, res) => {
 /*
   const db = req.app.locals.db;
 
-  // Clear in order to respect foreign key constraints
   const queries = [
-    // Child tables first
     'DELETE FROM event_assets',
     'DELETE FROM procurement_request_items',
     'DELETE FROM customer_visits',
@@ -400,12 +376,6 @@ router.post('/clear-all-data', (req, res) => {
     'DELETE FROM customers',
     'DELETE FROM procurement_requests',
     'DELETE FROM vendors',
-    // Keep users table but clear non-admin users if needed
-    // 'DELETE FROM users WHERE role != "admin"',
-    // Keep reference tables
-    // 'DELETE FROM categories',
-    // 'DELETE FROM uom',
-    // 'DELETE FROM booth_setups'
   ];
 
   db.beginTransaction(err => {
@@ -429,7 +399,6 @@ router.post('/clear-all-data', (req, res) => {
   });
 */
 
-// GET accounting report dengan date filter
 router.get('/accounting-report', (req, res) => {
   const db = req.app.locals.db;
   const { startDate, endDate, filterType, reportFocus } = req.query;
@@ -450,24 +419,20 @@ router.get('/accounting-report', (req, res) => {
   }
 
   if (filterType === 'month') {
-    // Filter by specific month (YYYY-MM format)
     if (startDate) {
       dateFilter = 'AND DATE(transaction_date) >= ? AND DATE(transaction_date) <= LAST_DAY(?)';
       params.push(startDate + '-01', startDate + '-01');
     }
   } else if (filterType === 'year') {
-    // Filter by specific year (YYYY format)
     if (startDate) {
       dateFilter = 'AND YEAR(transaction_date) = ?';
       params.push(startDate);
     }
   } else if (startDate && endDate) {
-    // Custom date range
     dateFilter = 'AND DATE(transaction_date) >= ? AND DATE(transaction_date) <= ?';
     params.push(startDate, endDate);
   }
 
-  // Combined query for all financial transactions
   const query = `
     SELECT 
       transaction_date,
@@ -480,7 +445,6 @@ router.get('/accounting-report', (req, res) => {
       status,
       customer_vendor
     FROM (
-      -- Procurement Expenses (Debit)
       SELECT 
         pr.created_at as transaction_date,
         'Procurement' as transaction_type,
@@ -498,7 +462,6 @@ router.get('/accounting-report', (req, res) => {
       
       UNION ALL
       
-      -- In Studio Revenue (Credit)
       SELECT 
         cv.visit_date as transaction_date,
         'In Studio Visit' as transaction_type,
@@ -516,7 +479,6 @@ router.get('/accounting-report', (req, res) => {
       
       UNION ALL
       
-      -- Off Site Revenue (Credit)
       SELECT 
         e.start_date as transaction_date,
         'Off Site Event' as transaction_type,
@@ -542,7 +504,6 @@ router.get('/accounting-report', (req, res) => {
       return res.status(500).json({ success: false, message: 'Error fetching accounting report' });
     }
 
-    // Calculate running balance
     let runningBalance = 0;
     const transactionsWithBalance = results.map(transaction => {
       runningBalance += (transaction.credit - transaction.debit);
@@ -559,7 +520,6 @@ router.get('/accounting-report', (req, res) => {
   });
 });
 
-// GET predictive stock alerts (Proactive AI-Assisted Inventory Forecasting)
 router.get('/predictive-stock', (req, res) => {
   const db = req.app.locals.db;
 
@@ -609,7 +569,6 @@ router.get('/predictive-stock', (req, res) => {
       return res.json({ success: true, data: [] });
     }
 
-    // Now let's fetch specific upcoming events that use these items
     const eventsQuery = `
       SELECT 
         e.event_id,
@@ -631,7 +590,6 @@ router.get('/predictive-stock', (req, res) => {
         return res.status(500).json({ success: false, message: 'Error fetching upcoming events' });
       }
 
-      // Map events to each item
       const result = items.map(item => {
         const relatedEvents = events.filter(e => 
           (e.backdrop_item_id === item.item_id && e.backdrop_quantity > 0) ||
@@ -644,7 +602,6 @@ router.get('/predictive-stock', (req, res) => {
           reserved_qty: e.backdrop_item_id === item.item_id ? e.backdrop_quantity : e.print_quantity
         }));
 
-        // Determine critical status
         let severity = 'low_stock';
         if (item.projected_net_stock < 0) {
           severity = 'critical_shortage';
@@ -659,7 +616,6 @@ router.get('/predictive-stock', (req, res) => {
         };
       });
 
-      // Filter out items that have no upcoming events and are actually healthy (above min stock)
       const filteredResult = result.filter(item => 
         item.projected_net_stock <= item.minimum_stock || 
         item.projected_net_stock < 0 || 

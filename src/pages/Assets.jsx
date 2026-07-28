@@ -167,7 +167,6 @@ function Assets() {
     fetchAssets()
   }, [navigate, statusFilter, categoryFilter, searchTerm, currentPage, itemsPerPage])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (html5QrCodeRef.current) {
@@ -205,7 +204,6 @@ function Assets() {
   const startCamera = async () => {
     try {
       if (html5QrCodeRef.current) {
-        // Stop existing camera if any
         try {
           await html5QrCodeRef.current.stop()
         } catch (e) {
@@ -222,7 +220,6 @@ function Assets() {
         config,
         handleScanResult,
         (errorMessage) => {
-          // Ignore scan errors
         }
       )
       console.log('Camera started successfully')
@@ -238,7 +235,6 @@ function Assets() {
         await html5QrCodeRef.current.stop()
         console.log('Camera stopped successfully')
       } catch (err) {
-        // Ignore transition errors
         if (err.message && err.message.includes('transition')) {
           console.log('Scanner already in transition, ignoring stop error')
         } else {
@@ -285,18 +281,18 @@ function Assets() {
 
   const handleStatusFilter = (status) => {
     setStatusFilter(status)
-    setCategoryFilter('') // Reset category filter when status changes
-    setSearchTerm('') // Reset search term when status changes
+    setCategoryFilter('')
+    setSearchTerm('')
   }
 
   const handleCategoryFilter = (category) => {
     setCategoryFilter(category)
-    setSearchTerm('') // Reset search term when category changes
+    setSearchTerm('')
   }
 
   const handleSearch = (search) => {
     setSearchTerm(search)
-    setCategoryFilter('') // Reset category filter when search changes
+    setCategoryFilter('')
   }
 
   const handlePageChange = (newPage) => {
@@ -327,7 +323,6 @@ function Assets() {
   const handleViewAsset = async (asset) => {
     setSelectedAsset(asset)
     
-    // Fetch events for this asset
     try {
       const eventsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/${asset.asset_id}/events`)
       const eventsData = await eventsResponse.json()
@@ -341,7 +336,6 @@ function Assets() {
       setAssetEvents([])
     }
     
-    // Generate QR code if asset has barcode
     if (asset.has_barcode === 1) {
       try {
         console.log('Generating QR code for asset:', asset.asset_id)
@@ -393,7 +387,6 @@ function Assets() {
         return
       }
       
-      // Fetch events for this asset
       try {
         const eventsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/${asset.asset_id}/events`)
         const eventsData = await eventsResponse.json()
@@ -407,10 +400,8 @@ function Assets() {
         setAssetEvents([])
       }
       
-      // Stop camera before opening Edit modal
       await stopCamera()
       
-      // Close scan modal and open Edit modal
       setShowScanModal(false)
       handleEditAsset(asset)
       setIsScanning(false)

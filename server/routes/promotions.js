@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// GET all promotions
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
   const query = 'SELECT * FROM promotions ORDER BY created_at DESC';
@@ -15,7 +14,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST new promotion
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const {
@@ -37,8 +35,6 @@ router.post('/', (req, res) => {
     return res.status(400).json({ success: false, message: 'Missing required promotional fields' });
   }
 
-  // Check for duplicate promo code
-  const checkQuery = 'SELECT promo_id FROM promotions WHERE LOWER(promo_code) = LOWER(?)';
   db.query(checkQuery, [promo_code], (err, results) => {
     if (err) {
       console.error('Error checking duplicate promo code:', err);
@@ -81,7 +77,6 @@ router.post('/', (req, res) => {
   });
 });
 
-// PUT update promotion
 router.put('/:id', (req, res) => {
   const db = req.app.locals.db;
   const promoId = req.params.id;
@@ -100,8 +95,6 @@ router.put('/:id', (req, res) => {
     status
   } = req.body;
 
-  // Check duplicate promo code excluding this ID
-  const checkQuery = 'SELECT promo_id FROM promotions WHERE LOWER(promo_code) = LOWER(?) AND promo_id != ?';
   db.query(checkQuery, [promo_code, promoId], (err, results) => {
     if (err) {
       console.error('Error checking duplicate code:', err);
@@ -145,7 +138,6 @@ router.put('/:id', (req, res) => {
   });
 });
 
-// DELETE promotion
 router.delete('/:id', (req, res) => {
   const db = req.app.locals.db;
   const promoId = req.params.id;
@@ -160,7 +152,6 @@ router.delete('/:id', (req, res) => {
   });
 });
 
-// POST validate promotion code
 router.post('/validate', (req, res) => {
   const db = req.app.locals.db;
   const { promo_code, amount, transaction_type, date, package_name } = req.body;
@@ -182,17 +173,14 @@ router.post('/validate', (req, res) => {
 
     const promo = results[0];
 
-    // 1. Check status
     if (promo.status !== 'active') {
       return res.json({ success: false, message: 'Promo ini sedang tidak aktif!' });
     }
 
-    // 2. Check dates
     const transactionDate = date ? new Date(date) : new Date();
     const startDate = new Date(promo.start_date);
     const endDate = new Date(promo.end_date);
     
-    // Set hours to 0 to compare days only
     transactionDate.setHours(0,0,0,0);
     startDate.setHours(0,0,0,0);
     endDate.setHours(0,0,0,0);
@@ -204,13 +192,11 @@ router.post('/validate', (req, res) => {
       return res.json({ success: false, message: 'Masa berlaku promo ini telah berakhir!' });
     }
 
-    // 3. Check applicability
     if (promo.applicable_to !== 'all' && promo.applicable_to !== transaction_type) {
       const typeLabel = promo.applicable_to === 'in_studio' ? 'In-Studio' : 'Off-Site Event';
       return res.json({ success: false, message: `Promo ini hanya berlaku untuk transaksi ${typeLabel}!` });
     }
 
-    // 4. Check min spending limit
     const transactionAmount = Number(amount) || 0;
     if (transactionAmount < Number(promo.min_transaction)) {
       return res.json({
@@ -219,10 +205,9 @@ router.post('/validate', (req, res) => {
       });
     }
 
-    // 5. Rule Specific validation
     if (promo.eligibility_type === 'weekday_slump' && promo.day_restrictions) {
       const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const dayName = weekdays[transactionDate.getDay()]; // e.g. 'Mon'
+      const dayName = weekdays[transactionDate.getDay()];
       if (!promo.day_restrictions.includes(dayName)) {
         return res.json({
           success: false,
@@ -240,7 +225,6 @@ router.post('/validate', (req, res) => {
       }
     }
 
-    // 6. Calculate discount amount
     let discountAmount = 0;
     if (promo.discount_type === 'percentage') {
       discountAmount = (transactionAmount * Number(promo.discount_value)) / 100;
@@ -248,7 +232,6 @@ router.post('/validate', (req, res) => {
       discountAmount = Number(promo.discount_value);
     }
 
-    // Discount cannot exceed transaction amount
     if (discountAmount > transactionAmount) {
       discountAmount = transactionAmount;
     }

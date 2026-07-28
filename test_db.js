@@ -15,7 +15,6 @@ db.connect((err) => {
   }
   console.log('Connected to MySQL database successfully');
 
-  // Test 1: Predictive Stock query
   const stockQuery = `
     SELECT 
       i.item_id,
@@ -59,7 +58,6 @@ db.connect((err) => {
       console.log('Test 1 Succeeded! Found items:', results.length);
     }
 
-    // Test 2: Revenue trend query
     const historicalQuery = `
       SELECT 
         month,

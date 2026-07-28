@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router();
 
-// Helper function to determine status based on dates
 function determineStatus(startDate, endDate) {
   const now = new Date();
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  // Reset time to midnight for accurate date comparison
   now.setHours(0, 0, 0, 0);
   start.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
@@ -21,7 +19,6 @@ function determineStatus(startDate, endDate) {
   }
 }
 
-// Helper function to format date to DD/MM/YY
 function formatDate(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -31,20 +28,17 @@ function formatDate(dateString) {
   return `${day}/${month}/${year}`;
 }
 
-// Check if date ranges overlap
 function dateRangesOverlap(start1, end1, start2, end2) {
   const s1 = new Date(start1);
   const e1 = new Date(end1);
   const s2 = new Date(start2);
   const e2 = new Date(end2);
   
-  // Reset time to midnight for accurate date comparison
   s1.setHours(0, 0, 0, 0);
   e1.setHours(0, 0, 0, 0);
   s2.setHours(0, 0, 0, 0);
   e2.setHours(0, 0, 0, 0);
   
-  // Ranges overlap if one starts before the other ends
   return s1 <= e2 && e1 >= s2;
 }
 
@@ -131,9 +125,7 @@ function getAssetConflicts(db, { start_date, end_date, asset_ids, exclude_event_
   });
 }
 
-// Update asset status based on event status changes
 function updateAssetStatusByEventStatus(event_id, newStatus, db) {
-  // Get all assets for this event
   const query = `
     SELECT a.asset_id
     FROM assets a
@@ -153,7 +145,6 @@ function updateAssetStatusByEventStatus(event_id, newStatus, db) {
     const assetIdsString = assetIds.map(() => '?').join(',');
     
     if (newStatus === 'in_progress') {
-      // Set assets to In Use
       db.query(
         `UPDATE assets SET status = 'In Use' WHERE asset_id IN (${assetIdsString})`,
         assetIds,
@@ -162,7 +153,6 @@ function updateAssetStatusByEventStatus(event_id, newStatus, db) {
         }
       );
     } else if (newStatus === 'completed' || newStatus === 'cancelled') {
-      // Check if assets are used in any other in_progress events
       const checkQuery = `
         SELECT DISTINCT a.asset_id
         FROM assets a
@@ -181,7 +171,6 @@ function updateAssetStatusByEventStatus(event_id, newStatus, db) {
         
         const inProgressAssetIds = inProgressResults.map(r => r.asset_id);
         
-        // Set assets to Available if not in any in_progress event
         assetIds.forEach(assetId => {
           if (!inProgressAssetIds.includes(assetId)) {
             db.query(
@@ -198,11 +187,9 @@ function updateAssetStatusByEventStatus(event_id, newStatus, db) {
   });
 }
 
-// Recalculate all asset statuses based on current event statuses
 router.post('/recalculate-asset-statuses', (req, res) => {
   const db = req.app.locals.db;
   
-  // First, set all assets to Available (except Maintenance, Drafted, Deleted)
   db.query(
     `UPDATE assets SET status = 'Available' WHERE status NOT IN ('Maintenance', 'Drafted', 'Deleted', 'Deleted Draft')`,
     (err) => {
@@ -211,7 +198,6 @@ router.post('/recalculate-asset-statuses', (req, res) => {
         return res.status(500).json({ success: false, message: 'Error resetting asset statuses' });
       }
       
-      // Get all assets used in in_progress events
       const query = `
         SELECT DISTINCT a.asset_id
         FROM assets a
@@ -234,7 +220,6 @@ router.post('/recalculate-asset-statuses', (req, res) => {
         const assetIds = results.map(r => r.asset_id);
         const assetIdsString = assetIds.map(() => '?').join(',');
         
-        // Set these assets to In Use
         db.query(
           `UPDATE assets SET status = 'In Use' WHERE asset_id IN (${assetIdsString})`,
           assetIds,
@@ -256,10 +241,8 @@ router.post('/recalculate-asset-statuses', (req, res) => {
   );
 });
 
-// Helper function to get suggested substitutes for a conflicted asset
 function getSuggestedSubstitutes(db, assetId, startDate, endDate, excludeEventId) {
   return new Promise((resolve) => {
-    // 1. Get the category_id and location of the conflicted asset
     db.query('SELECT category_id, name, location FROM assets WHERE asset_id = ?', [assetId], (err, assetRes) => {
       if (err || !assetRes || assetRes.length === 0) return resolve([]);
       const categoryId = assetRes[0].category_id;
@@ -267,7 +250,6 @@ function getSuggestedSubstitutes(db, assetId, startDate, endDate, excludeEventId
 
       if (!categoryId) return resolve([]);
 
-      // 2. Get other assets in the same category (excluding deleted, retired and the asset itself)
       const candidateQuery = `
         SELECT asset_id, name, status, location
         FROM assets
@@ -279,7 +261,6 @@ function getSuggestedSubstitutes(db, assetId, startDate, endDate, excludeEventId
       db.query(candidateQuery, [categoryId, assetId], (err, candidates) => {
         if (err || !candidates || candidates.length === 0) return resolve([]);
 
-        // 3. For each candidate, check if they have any overlapping event bookings
         const candidateIds = candidates.map(c => c.asset_id);
         const candidateIdsString = candidateIds.map(() => '?').join(',');
 
@@ -299,7 +280,6 @@ function getSuggestedSubstitutes(db, assetId, startDate, endDate, excludeEventId
 
         db.query(overlapQuery, params, (err, overlaps) => {
           if (err || !overlaps) {
-            // Fallback to checking statuses
             const subs = candidates.map(c => {
               let similarity = 90;
               if (c.location === originalLocation) similarity += 5;
@@ -318,17 +298,15 @@ function getSuggestedSubstitutes(db, assetId, startDate, endDate, excludeEventId
 
           const overlappedAssetIds = new Set(overlaps.map(o => o.asset_id));
 
-          // 4. Filter candidates that are NOT overlapped
           const substitutes = candidates.map(c => {
             const isOverlapped = overlappedAssetIds.has(c.asset_id) || c.status === 'In Use' || c.status === 'Maintenance';
             
-            // Calculate an AI-assisted similarity rating (expressed in %)
-            let similarity = 90; // baseline for same category
+            let similarity = 90; 
             if (c.location === originalLocation) {
-              similarity += 5; // same location is better
+              similarity += 5; 
             }
             if (c.status === 'Available') {
-              similarity += 3; // ready on shelf
+              similarity += 3; 
             }
 
             return {
@@ -339,19 +317,17 @@ function getSuggestedSubstitutes(db, assetId, startDate, endDate, excludeEventId
               similarity_rating: Math.min(similarity, 99),
               is_available: !isOverlapped
             };
-          }).filter(c => c.is_available); // only return actually available ones
+          }).filter(c => c.is_available); 
 
-          // Sort by similarity rating descending
           substitutes.sort((a, b) => b.similarity_rating - a.similarity_rating);
 
-          resolve(substitutes.slice(0, 3)); // return top 3
+          resolve(substitutes.slice(0, 3)); 
         });
       });
     });
   });
 }
 
-// Check asset conflicts for a given date range and assets
 router.post('/check-asset-conflicts', (req, res) => {
   const db = req.app.locals.db;
   const { start_date, end_date, asset_ids, exclude_event_id } = req.body;
@@ -396,12 +372,10 @@ router.post('/check-asset-conflicts', (req, res) => {
       });
     }
     
-    // Filter events that overlap with the requested date range
     const conflicts = results.filter(event => {
       return dateRangesOverlap(start_date, end_date, event.start_date, event.end_date);
     });
     
-    // Group conflicts by asset
     const conflictsByAsset = {};
     conflicts.forEach(conflict => {
       if (!conflictsByAsset[conflict.asset_id]) {
@@ -422,7 +396,6 @@ router.post('/check-asset-conflicts', (req, res) => {
     
     const conflictList = Object.values(conflictsByAsset);
     
-    // Also check for assets that are currently "In Use"
     const inUseQuery = `
       SELECT asset_id, name as asset_name, status
       FROM assets
@@ -434,7 +407,6 @@ router.post('/check-asset-conflicts', (req, res) => {
       if (err) {
         console.error('Error checking in-use assets:', err);
       } else {
-        // Add in-use assets to conflicts
         inUseResults.forEach(asset => {
           if (!conflictsByAsset[asset.asset_id]) {
             conflictsByAsset[asset.asset_id] = {
@@ -459,7 +431,6 @@ router.post('/check-asset-conflicts', (req, res) => {
         });
       }
 
-      // If we have conflicts, fetch suggested substitutes for each conflicted asset
       const substitutePromises = finalConflictList.map(async (conflict) => {
         const substitutes = await getSuggestedSubstitutes(db, conflict.asset_id, start_date, end_date, exclude_event_id);
         return {
@@ -479,7 +450,6 @@ router.post('/check-asset-conflicts', (req, res) => {
   });
 });
 
-// GET all events for export (supports multi-select status and date range, no pagination)
 router.get('/export', (req, res) => {
   const db = req.app.locals.db;
   const { status, startDate, endDate, search } = req.query;
@@ -530,11 +500,9 @@ router.get('/export', (req, res) => {
   });
 });
 
-// Get all events with summary counts
 router.get('/summary', (req, res) => {
   const db = req.app.locals.db;
 
-  // Auto-update status in database before counting
   const updateQuery = `
     UPDATE events
     SET status = CASE
@@ -587,7 +555,6 @@ router.get('/summary', (req, res) => {
   });
 });
 
-// Get all events
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
   const { status, date, search, page = 1, limit = 10 } = req.query;
@@ -596,7 +563,6 @@ router.get('/', (req, res) => {
   const limitNum = parseInt(limit);
   const offset = (pageNum - 1) * limitNum;
 
-  // Auto-update status in database before filtering
   const updateQuery = `
     UPDATE events
     SET status = CASE
@@ -662,7 +628,6 @@ router.get('/', (req, res) => {
     query += ' GROUP BY e.event_id ORDER BY e.created_at DESC';
     query += ` LIMIT ${limitNum} OFFSET ${offset}`;
 
-    // Get total count
     db.query(countQuery, countParams, (err, countResult) => {
       if (err) {
         return res.status(500).json({
@@ -673,7 +638,6 @@ router.get('/', (req, res) => {
 
       const total = countResult[0].total;
 
-      // Get paginated data
       db.query(query, params, (err, results) => {
         if (err) {
           return res.status(500).json({
@@ -682,7 +646,6 @@ router.get('/', (req, res) => {
           });
         }
 
-        // Format dates
         const formattedResults = results.map(event => {
           return {
             ...event,
@@ -704,7 +667,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// Get events for calendar (excluding cancelled events) - MUST BE BEFORE /:event_id
 router.get('/calendar', (req, res) => {
   const db = req.app.locals.db;
   const { status } = req.query;
@@ -740,9 +702,7 @@ router.get('/calendar', (req, res) => {
       });
     }
 
-    // Format dates and auto-update status
     const events = results.map(event => {
-      // Auto-update status based on dates (unless cancelled)
       if (event.status?.toLowerCase() !== 'cancelled') {
         event.status = determineStatus(event.start_date, event.end_date);
       }
@@ -760,7 +720,6 @@ router.get('/calendar', (req, res) => {
   });
 });
 
-// Get single event by ID
 router.get('/:event_id', (req, res) => {
   const db = req.app.locals.db;
   const { event_id } = req.params;
@@ -794,22 +753,18 @@ router.get('/:event_id', (req, res) => {
 
     const event = eventResults[0];
 
-    // If custom backdrop is checked (-1)
     if (event.backdrop_item_id === -1) {
       event.backdrop_name = 'Custom Backdrop';
       event.backdrop_stock = 0;
     }
 
-    // Auto-update status based on dates (unless cancelled)
     if (event.status?.toLowerCase() !== 'cancelled') {
       event.status = determineStatus(event.start_date, event.end_date);
     }
 
-    // Format dates for display (DD-MM-YY)
     event.start_date_formatted = formatDate(event.start_date);
     event.end_date_formatted = formatDate(event.end_date);
 
-    // Convert dates to YYYY-MM-DD format for HTML date inputs
     if (event.start_date) {
       const startDate = new Date(event.start_date);
       const year = startDate.getFullYear();
@@ -825,7 +780,6 @@ router.get('/:event_id', (req, res) => {
       event.end_date = `${year}-${month}-${day}`;
     }
 
-    // Get assets
     const assetsQuery = `
       SELECT a.asset_id, a.name as asset_name, a.status as asset_status, ea.quantity
       FROM event_assets ea
@@ -841,7 +795,6 @@ router.get('/:event_id', (req, res) => {
         });
       }
 
-      // Add "Item Deleted" annotation for deleted assets
       const assetsWithAnnotation = assetsResults.map(asset => {
         if (asset.asset_status === 'Deleted') {
           return {
@@ -862,7 +815,6 @@ router.get('/:event_id', (req, res) => {
   });
 });
 
-// Create new event
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const {
@@ -888,7 +840,6 @@ router.post('/', (req, res) => {
     discount_amount
   } = req.body;
 
-  // Auto-determine status based on dates
   const autoStatus = determineStatus(start_date, end_date);
 
   const assetIds = Array.isArray(assets)
@@ -899,7 +850,6 @@ router.post('/', (req, res) => {
     db.beginTransaction(err => {
       if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
 
-      // 1. Deduct Inventory (Backdrop & Prints)
       const inventoryUpdates = [];
       if (backdrop_item_id && backdrop_item_id !== -1 && backdrop_quantity > 0) {
         inventoryUpdates.push(new Promise((resolve, reject) => {
@@ -918,7 +868,6 @@ router.post('/', (req, res) => {
 
       Promise.all(inventoryUpdates)
         .then(() => {
-          // 2. Insert Event
           const eventQuery = `
             INSERT INTO events (
               event_name, start_date, end_date, location, customer, customer_id, 
@@ -938,17 +887,14 @@ router.post('/', (req, res) => {
           ], (err, result) => {
             if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Error creating event' }));
 
-            // Get the actual event_id
             db.query('SELECT event_id FROM events WHERE id = LAST_INSERT_ID()', (err, idResult) => {
               if (err || idResult.length === 0) return db.rollback(() => res.status(500).json({ success: false, message: 'ID error' }));
               const actual_event_id = idResult[0].event_id;
 
-              // 3. Update Customer total_spending
               if (customer_id && expected_revenue) {
                 db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [expected_revenue, customer_id]);
               }
 
-              // 4. Insert Assets
               if (assets && assets.length > 0) {
                 const assetPromises = assets.map(asset => {
                   return new Promise((resolve, reject) => {
@@ -1010,13 +956,10 @@ router.post('/', (req, res) => {
 });
 
 function insertAssets(event_id, assets, db, res, callback) {
-  // Insert assets
   if (assets && assets.length > 0) {
     const assetPromises = assets.map(asset => {
       return new Promise((resolve, reject) => {
-        // If asset.asset_id exists, use it. Otherwise, look up asset_id by name
         if (asset.asset_id) {
-          // Get original location from assets table
           const getLocationQuery = 'SELECT location FROM assets WHERE asset_id = ?';
           db.query(getLocationQuery, [asset.asset_id], (err, locResults) => {
             if (err) {
@@ -1038,14 +981,12 @@ function insertAssets(event_id, assets, db, res, callback) {
             }
           });
         } else {
-          // Look up asset_id by name
           const lookupQuery = 'SELECT asset_id, location FROM assets WHERE name = ?';
           db.query(lookupQuery, [asset.name], (err, results) => {
             if (err) {
               console.error('Error looking up asset_id:', err);
               reject(err);
             } else if (results.length === 0) {
-              // Asset not found, reject the promise
               reject(new Error(`Asset "${asset.name}" not found in assets table`));
             } else {
               const asset_id = results[0].asset_id;
@@ -1093,7 +1034,6 @@ function insertAssets(event_id, assets, db, res, callback) {
   }
 }
 
-// Update asset locations to a specific location
 function updateAssetLocations(event_id, newLocation, db) {
   const query = `
     UPDATE assets a
@@ -1108,7 +1048,6 @@ function updateAssetLocations(event_id, newLocation, db) {
   });
 }
 
-// Restore asset locations to original locations
 function restoreAssetLocations(event_id, db) {
   const query = `
     UPDATE assets a
@@ -1123,7 +1062,6 @@ function restoreAssetLocations(event_id, db) {
   });
 }
 
-// Update event
 router.put('/:event_id', (req, res) => {
   const db = req.app.locals.db;
   const { event_id } = req.params;
@@ -1158,12 +1096,10 @@ router.put('/:event_id', (req, res) => {
     db.beginTransaction(err => {
       if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
 
-      // Get old data for restoration
       db.query('SELECT * FROM events WHERE event_id = ?', [event_id], (err, results) => {
         if (err || results.length === 0) return db.rollback(() => res.status(404).json({ success: false, message: 'Event not found' }));
         const oldEvent = results[0];
 
-      // 1. Restore Inventory
       if (oldEvent.backdrop_item_id && oldEvent.backdrop_item_id !== -1 && oldEvent.backdrop_quantity > 0) {
         db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldEvent.backdrop_quantity, oldEvent.backdrop_item_id]);
       }
@@ -1171,7 +1107,6 @@ router.put('/:event_id', (req, res) => {
         db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldEvent.print_quantity, oldEvent.print_item_id]);
       }
 
-      // 2. Deduct New Inventory
       if (backdrop_item_id && backdrop_item_id !== -1 && backdrop_quantity > 0) {
         db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [backdrop_quantity, backdrop_item_id]);
       }
@@ -1179,7 +1114,6 @@ router.put('/:event_id', (req, res) => {
         db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [print_quantity, print_item_id]);
       }
 
-      // 3. Update Event
       const updateQuery = `
         UPDATE events SET 
           event_name = ?, start_date = ?, end_date = ?, location = ?, status = ?,
@@ -1197,13 +1131,11 @@ router.put('/:event_id', (req, res) => {
         ], (err) => {
           if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Update error' }));
 
-          // 4. Update Customer Spending
           const revDiff = expected_revenue - oldEvent.expected_revenue;
           if (customer_id && revDiff !== 0) {
             db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [revDiff, customer_id]);
           }
 
-          // 5. Update Assets
           db.query('DELETE FROM event_assets WHERE event_id = ?', [event_id], (err) => {
             if (assets && assets.length > 0) {
               const assetPromises = assets.map(asset => {
@@ -1267,7 +1199,6 @@ router.put('/:event_id', (req, res) => {
   return proceedUpdate();
 });
 
-// Delete event (move to cancelled)
 router.delete('/:event_id', (req, res) => {
   const db = req.app.locals.db;
   const { event_id } = req.params;
@@ -1279,7 +1210,6 @@ router.delete('/:event_id', (req, res) => {
     db.beginTransaction(err => {
       if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
 
-      // 1. Restore Inventory
       if (event.backdrop_item_id && event.backdrop_item_id !== -1 && event.backdrop_quantity > 0) {
         db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [event.backdrop_quantity, event.backdrop_item_id]);
       }
@@ -1287,15 +1217,12 @@ router.delete('/:event_id', (req, res) => {
         db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [event.print_quantity, event.print_item_id]);
       }
 
-      // 2. Subtract Customer Spending
       if (event.customer_id && event.status !== 'cancelled' && event.expected_revenue) {
         db.query('UPDATE customers SET total_spending = total_spending - ? WHERE customer_id = ?', [event.expected_revenue, event.customer_id]);
       }
 
-      // 3. Update Status
       db.query("UPDATE events SET status = 'cancelled' WHERE event_id = ?", [event_id], (err) => {
         if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Cancel error' }));
-        // Update asset status to Available when event is cancelled
         updateAssetStatusByEventStatus(event_id, 'cancelled', db);
         db.commit(err => {
           if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
@@ -1306,12 +1233,10 @@ router.delete('/:event_id', (req, res) => {
   });
 });
 
-// Hard delete event (permanently remove from database)
 router.delete('/:event_id/hard-delete', (req, res) => {
   const db = req.app.locals.db;
   const { event_id } = req.params;
 
-  // First, delete event_assets records
   db.query('DELETE FROM event_assets WHERE event_id = ?', [event_id], (err) => {
     if (err) {
       console.error('Error deleting event assets:', err);
@@ -1321,7 +1246,6 @@ router.delete('/:event_id/hard-delete', (req, res) => {
       });
     }
 
-    // Then delete the event
     const deleteEventQuery = 'DELETE FROM events WHERE event_id = ?';
     db.query(deleteEventQuery, [event_id], (err, result) => {
       if (err) {

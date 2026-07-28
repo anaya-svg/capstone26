@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// GET all UOM
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
 
@@ -27,7 +26,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST create new UOM
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const { uom_name } = req.body;
@@ -70,7 +68,6 @@ router.post('/', (req, res) => {
   });
 });
 
-// PUT update UOM
 router.put('/:id', (req, res) => {
   const db = req.app.locals.db;
   const uomId = req.params.id;
@@ -122,7 +119,6 @@ router.put('/:id', (req, res) => {
   });
 });
 
-// DELETE UOM
 router.delete('/:id', (req, res) => {
   const db = req.app.locals.db;
   const uomId = req.params.id;

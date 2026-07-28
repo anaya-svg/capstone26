@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// GET all customers
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
   const { search, segment, page = 1, limit = 10 } = req.query;
@@ -32,7 +31,6 @@ router.get('/', (req, res) => {
   const params = [];
   const countParams = [];
 
-  // Filter by segment
   if (segment === 'in_studio') {
     query += ' AND c.is_in_studio = TRUE';
     countQuery += ' AND c.is_in_studio = TRUE';
@@ -41,7 +39,6 @@ router.get('/', (req, res) => {
     countQuery += ' AND c.is_off_site = TRUE';
   }
 
-  // Search by customer name
   if (search) {
     query += ' AND c.name LIKE ?';
     countQuery += ' AND c.name LIKE ?';
@@ -52,7 +49,6 @@ router.get('/', (req, res) => {
   query += ' GROUP BY c.customer_id ORDER BY c.created_at DESC';
   query += ` LIMIT ${limitNum} OFFSET ${offset}`;
 
-  // Get total count
   db.query(countQuery, countParams, (err, countResult) => {
     if (err) {
       console.error('Error counting customers:', err);
@@ -64,7 +60,6 @@ router.get('/', (req, res) => {
 
     const total = countResult[0].total;
 
-    // Get paginated data
     db.query(query, params, (err, results) => {
       if (err) {
         console.error('Error fetching customers:', err);
@@ -86,7 +81,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// GET all customers for export (supports segment and search, no pagination)
 router.get('/export', (req, res) => {
   const db = req.app.locals.db;
   const { search, segment } = req.query;
@@ -136,7 +130,6 @@ router.get('/export', (req, res) => {
   });
 });
 
-// GET customers summary
 router.get('/summary', (req, res) => {
   const db = req.app.locals.db;
   const { segment } = req.query;
@@ -144,7 +137,6 @@ router.get('/summary', (req, res) => {
   let query = '';
   
   if (segment === 'in_studio') {
-    // In Studio summary: Total In Studio Customer, Total In Studio Revenue (from visits), Total Visits
     query = `
       SELECT
         (SELECT COUNT(*) FROM customers WHERE is_in_studio = TRUE) as total_customers,
@@ -152,7 +144,6 @@ router.get('/summary', (req, res) => {
         (SELECT COUNT(*) FROM customer_visits) as total_visits
     `;
   } else if (segment === 'off_site') {
-    // Off Site summary: Total Off Site Customer, Total Off Site Revenue (from in_progress/completed events), Total Booths
     query = `
       SELECT
         (SELECT COUNT(*) FROM customers WHERE is_off_site = TRUE) as total_customers,
@@ -160,7 +151,6 @@ router.get('/summary', (req, res) => {
         (SELECT COUNT(*) FROM events WHERE LOWER(status) IN ('in_progress', 'completed')) as total_booths
     `;
   } else {
-    // All Customers summary: Total Customers, Total Revenue (in-studio visits + off-site events), Total Visits
     query = `
       SELECT
         (SELECT COUNT(*) FROM customers) as total_customers,
@@ -189,7 +179,6 @@ router.get('/summary', (req, res) => {
   });
 });
 
-// GET single customer by ID
 router.get('/:customer_id', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
@@ -219,7 +208,6 @@ router.get('/:customer_id', (req, res) => {
   });
 });
 
-// GET customer visits
 router.get('/:customer_id/visits', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
@@ -242,7 +230,6 @@ router.get('/:customer_id/visits', (req, res) => {
   });
 });
 
-// POST assign customer to In Studio
 router.post('/:customer_id/assign-in-studio', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
@@ -271,7 +258,6 @@ router.post('/:customer_id/assign-in-studio', (req, res) => {
       });
     }
 
-    // Get updated customer
     const selectQuery = 'SELECT * FROM customers WHERE customer_id = ?';
     db.query(selectQuery, [customer_id], (err, results) => {
       if (err) {
@@ -291,7 +277,6 @@ router.post('/:customer_id/assign-in-studio', (req, res) => {
   });
 });
 
-// POST assign customer to Off Site
 router.post('/:customer_id/assign-off-site', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
@@ -320,7 +305,6 @@ router.post('/:customer_id/assign-off-site', (req, res) => {
       });
     }
 
-    // Get updated customer
     const selectQuery = 'SELECT * FROM customers WHERE customer_id = ?';
     db.query(selectQuery, [customer_id], (err, results) => {
       if (err) {
@@ -340,12 +324,10 @@ router.post('/:customer_id/assign-off-site', (req, res) => {
   });
 });
 
-// POST create new customer
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const { name, phone_number, email } = req.body;
 
-  // Validate required fields
   if (!name) {
     return res.status(400).json({
       success: false,
@@ -373,7 +355,6 @@ router.post('/', (req, res) => {
       });
     }
 
-    // Get the created customer
     const selectQuery = 'SELECT * FROM customers WHERE customer_id = ?';
     db.query(selectQuery, [result.insertId], (err, results) => {
       if (err) {
@@ -393,7 +374,6 @@ router.post('/', (req, res) => {
   });
 });
 
-// POST add visit to customer (Package-based)
 router.post('/:customer_id/visits', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
@@ -409,7 +389,6 @@ router.post('/:customer_id/visits', (req, res) => {
     discount_amount
   } = req.body;
 
-  // Calculate spending based on package
   let subtotal = 0;
   if (package_name === 'Snap Photobox') {
     subtotal = 20000;
@@ -431,11 +410,9 @@ router.post('/:customer_id/visits', (req, res) => {
   const promoDiscount = Number(discount_amount) || 0;
   const spending = Math.max(0, subtotal - promoDiscount);
 
-  // Transaction to ensure atomicity
   db.beginTransaction(err => {
     if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
 
-    // Check inventory stock if paper selected
     if (paper_type_item_id && paper_quantity > 0) {
       db.query('SELECT stock_quantity FROM inventory WHERE item_id = ?', [paper_type_item_id], (err, inv) => {
         if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Error checking inventory' }));
@@ -444,7 +421,6 @@ router.post('/:customer_id/visits', (req, res) => {
           return db.rollback(() => res.status(400).json({ success: false, message: 'Quantity insufficient' }));
         }
 
-        // Deduct inventory
         db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
           if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating inventory' }));
           
@@ -466,7 +442,6 @@ router.post('/:customer_id/visits', (req, res) => {
           return db.rollback(() => res.status(500).json({ success: false, message: 'Error creating visit' }));
         }
 
-        // Update customer totals
         db.query('UPDATE customers SET total_visits = total_visits + 1, total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [spending, visit_date, customer_id], (err) => {
           if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating customer totals' }));
 
@@ -480,7 +455,6 @@ router.post('/:customer_id/visits', (req, res) => {
   });
 });
 
-// PUT update customer visit
 router.put('/:customer_id/visits/:visit_id', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id, visit_id } = req.params;
@@ -496,13 +470,11 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
     discount_amount
   } = req.body;
 
-  // Get current visit data to calculate difference and restore inventory
   db.query('SELECT * FROM customer_visits WHERE visit_id = ?', [visit_id], (err, results) => {
     if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Visit not found' });
     
     const oldVisit = results[0];
 
-    // Calculate new spending
     let subtotal = 0;
     if (package_name === 'Snap Photobox') {
       subtotal = 20000;
@@ -527,12 +499,10 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
     db.beginTransaction(err => {
       if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
 
-      // 1. Restore old inventory
       if (oldVisit.paper_type_item_id && oldVisit.paper_quantity > 0) {
         db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldVisit.paper_quantity, oldVisit.paper_type_item_id]);
       }
 
-      // 2. Check and Deduct new inventory
       if (paper_type_item_id && paper_quantity > 0) {
         db.query('SELECT stock_quantity FROM inventory WHERE item_id = ?', [paper_type_item_id], (err, inv) => {
           if (err || inv.length === 0 || inv[0].stock_quantity < paper_quantity) {
@@ -555,7 +525,6 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
         db.query(updateQuery, [visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount, visit_id], (err) => {
           if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Update error' }));
 
-          // Update customer total_spending
           const diff = spending - oldVisit.spending;
           db.query('UPDATE customers SET total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [diff, visit_date, customer_id], (err) => {
             if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Customer update error' }));
@@ -571,12 +540,10 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
   });
 });
 
-// DELETE customer visit
 router.delete('/:customer_id/visits/:visit_id', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id, visit_id } = req.params;
 
-  // Get visit details to subtract from totals and restore inventory
   const getVisitQuery = 'SELECT * FROM customer_visits WHERE visit_id = ? AND customer_id = ?';
   db.query(getVisitQuery, [visit_id, customer_id], (err, results) => {
     if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Visit not found' });
@@ -586,16 +553,13 @@ router.delete('/:customer_id/visits/:visit_id', (req, res) => {
     db.beginTransaction(err => {
       if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
 
-      // 1. Restore inventory
       if (visit.paper_type_item_id && visit.paper_quantity > 0) {
         db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [visit.paper_quantity, visit.paper_type_item_id]);
       }
 
-      // 2. Delete visit
       db.query('DELETE FROM customer_visits WHERE visit_id = ?', [visit_id], (err) => {
         if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Delete error' }));
 
-        // 3. Update customer totals
         db.query('UPDATE customers SET total_visits = total_visits - 1, total_spending = total_spending - ? WHERE customer_id = ?', [visit.spending, customer_id], (err) => {
           if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Customer update error' }));
 
@@ -609,7 +573,6 @@ router.delete('/:customer_id/visits/:visit_id', (req, res) => {
   });
 });
 
-// GET customer events for Off-Site view
 router.get('/:customer_id/events', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
@@ -644,13 +607,11 @@ router.get('/:customer_id/events', (req, res) => {
   });
 });
 
-// PUT update customer
 router.put('/:customer_id', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
   const { name, phone_number, email } = req.body;
 
-  // Validate required fields
   if (!name) {
     return res.status(400).json({
       success: false,
@@ -680,7 +641,6 @@ router.put('/:customer_id', (req, res) => {
       });
     }
 
-    // Get updated customer
     const selectQuery = 'SELECT * FROM customers WHERE customer_id = ?';
     db.query(selectQuery, [customer_id], (err, results) => {
       if (err) {
@@ -700,7 +660,6 @@ router.put('/:customer_id', (req, res) => {
   });
 });
 
-// DELETE customer
 router.delete('/:customer_id', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;

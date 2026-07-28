@@ -13,8 +13,7 @@ function EmailVerification() {
   const navigate = useNavigate()
   const location = useLocation()
   
-  // Determine mode: registration or forgot-password
-  const mode = location.state?.mode || 'registration' // 'registration' or 'forgot-password'
+  const mode = location.state?.mode || 'registration'
   const isAdmin = location.state?.isAdmin || false
   const email = location.state?.email || ''
   const [verificationCode, setVerificationCode] = useState(location.state?.verification_code || '')
@@ -25,7 +24,6 @@ function EmailVerification() {
     newCode[index] = value
     setCode(newCode)
 
-    // Auto-focus next input
     if (value && index < 4) {
       const nextInput = document.getElementById(`code-${index + 1}`)
       if (nextInput) nextInput.focus()
@@ -52,7 +50,6 @@ function EmailVerification() {
       return
     }
 
-    // For forgot-password mode, verify email matches sessionStorage
     if (mode === 'forgot-password') {
       const storedEmail = sessionStorage.getItem('reset_email')
       if (!storedEmail || storedEmail !== email) {
@@ -68,9 +65,6 @@ function EmailVerification() {
     setApiError('')
 
     try {
-      console.log('Sending verification request...')
-      
-      // Choose the correct endpoint based on mode
       const endpoint = mode === 'forgot-password' 
         ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/verify-code`
         : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/verify-email`
@@ -92,12 +86,9 @@ function EmailVerification() {
 
       if (data.success) {
         if (mode === 'forgot-password') {
-          // Store code for reset password step
           sessionStorage.setItem('reset_code', verificationCode)
-          // Redirect to reset password page
           navigate('/reset-password')
         } else {
-          // Redirect to login after successful verification
           navigate(isAdmin ? '/admin-login' : '/login', {
             state: { successMessage: data.message }
           })
@@ -116,7 +107,6 @@ function EmailVerification() {
   const handleResend = async () => {
     if (resendCooldown > 0 || isResending) return
 
-    // For forgot-password mode, verify email matches sessionStorage
     if (mode === 'forgot-password') {
       const storedEmail = sessionStorage.getItem('reset_email')
       if (!storedEmail || storedEmail !== email) {
@@ -132,7 +122,6 @@ function EmailVerification() {
     setApiError('')
 
     try {
-      // Choose the correct endpoint based on mode
       const endpoint = mode === 'forgot-password'
         ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/forgot-password`
         : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/auth/resend-verification`
@@ -154,7 +143,6 @@ function EmailVerification() {
         setCode(['', '', '', '', ''])
         setResendCooldown(30)
 
-        // Start countdown
         const timer = setInterval(() => {
           setResendCooldown((prev) => {
             if (prev <= 1) {

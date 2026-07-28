@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// Get all calendar activities
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
 
@@ -27,7 +26,6 @@ router.get('/', (req, res) => {
       });
     }
 
-    // Generate repeated dates for activities with repeat_type
     const activities = [];
     const today = new Date();
     const oneYearLater = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
@@ -36,13 +34,11 @@ router.get('/', (req, res) => {
       const baseDate = new Date(activity.activity_date);
       let currentDate = new Date(baseDate);
 
-      // Add the original activity
       activities.push({
         ...activity,
         activity_date: currentDate.toISOString().split('T')[0]
       });
 
-      // Generate repeated dates based on repeat_type
       if (activity.repeat_type !== 'none') {
         while (currentDate < oneYearLater) {
           switch (activity.repeat_type) {
@@ -71,7 +67,6 @@ router.get('/', (req, res) => {
       }
     });
 
-    // Sort by date
     activities.sort((a, b) => new Date(a.activity_date) - new Date(b.activity_date));
 
     res.json({
@@ -81,7 +76,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// Get single calendar activity
 router.get('/:activity_id', (req, res) => {
   const db = req.app.locals.db;
   const { activity_id } = req.params;
@@ -124,7 +118,6 @@ router.get('/:activity_id', (req, res) => {
   });
 });
 
-// Create new calendar activity
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const { title, notes, activity_date, repeat_type, created_by } = req.body;
@@ -136,7 +129,6 @@ router.post('/', (req, res) => {
     });
   }
 
-  // Validate repeat_type
   const validRepeatTypes = ['none', 'daily', 'weekly', 'monthly', 'yearly'];
   if (repeat_type && !validRepeatTypes.includes(repeat_type)) {
     return res.status(400).json({
@@ -166,7 +158,6 @@ router.post('/', (req, res) => {
       });
     }
 
-    // Get the created activity
     const selectQuery = `
       SELECT
         activity_id,
@@ -201,7 +192,6 @@ router.post('/', (req, res) => {
   });
 });
 
-// Update calendar activity
 router.put('/:activity_id', (req, res) => {
   const db = req.app.locals.db;
   const { activity_id } = req.params;
@@ -228,7 +218,6 @@ router.put('/:activity_id', (req, res) => {
       });
     }
 
-    // Get the updated activity
     const selectQuery = `
       SELECT
         activity_id,
@@ -262,7 +251,6 @@ router.put('/:activity_id', (req, res) => {
   });
 });
 
-// Delete calendar activity
 router.delete('/:activity_id', (req, res) => {
   const db = req.app.locals.db;
   const { activity_id } = req.params;

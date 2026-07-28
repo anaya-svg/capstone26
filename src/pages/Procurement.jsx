@@ -591,14 +591,12 @@ function Procurement() {
     const newItems = [...formData.items]
     newItems[index][field] = value
     
-    // If item_classification is changed, reset item_id/asset_id
     if (field === 'item_classification') {
       newItems[index].item_id = null
       newItems[index].asset_id = null
       newItems[index].item_name = ''
     }
     
-    // If item_name is changed, find the item and get item_id/asset_id
     if (field === 'item_name') {
       const item = newItems[index]
       if (item.item_classification === 'Supplies') {
@@ -628,7 +626,6 @@ function Procurement() {
     const request = procurementRequests.find(r => r.pr_id === pr_id)
     if (!request) return
 
-    // Process items to add item_id/asset_id based on classification
     const processedItems = (request.items || []).map(item => {
       if (item.item_classification === 'Supplies') {
         const invItem = inventory.find(i => i.item_name === item.item_name)
@@ -712,7 +709,6 @@ function Procurement() {
     const pageWidth = doc.internal.pageSize.getWidth()
     const pageHeight = doc.internal.pageSize.getHeight()
 
-    // Determine document type based on status
     let docTitle = 'Purchase Request'
     let docFileName = 'PR'
     
@@ -724,7 +720,6 @@ function Procurement() {
       docFileName = 'GR'
     }
 
-    // KOP SURAT - Add logo
     try {
       const logoData = await fetchImageAsBase64('/snapfun_logo.png')
       doc.addImage(logoData, 'PNG', 20, 15, 30, 30)
@@ -732,31 +727,26 @@ function Procurement() {
       console.error('Error loading logo:', error)
     }
 
-    // Company name - Times New Roman, bold, size 20
     doc.setFont('times', 'bold')
     doc.setFontSize(20)
     doc.setTextColor('#3B82F6')
     doc.text('SnapFun Studio', 60, 25)
 
-    // Company address - Times New Roman, normal, size 12
     doc.setFont('times', 'normal')
     doc.setFontSize(12)
     doc.setTextColor('#374151')
     doc.text('Photo Booth & Event Services', 60, 32)
     doc.text('Jakarta, Indonesia', 60, 38)
 
-    // Document title - Times New Roman, bold, size 16
     doc.setFont('times', 'bold')
     doc.setFontSize(16)
     doc.setTextColor('#1F2937')
     doc.text(docTitle, 105, 52, { align: 'center' })
 
-    // Line separator
     doc.setDrawColor('#3B82F6')
     doc.setLineWidth(0.5)
     doc.line(20, 58, 190, 58)
 
-    // PR Details - Times New Roman, size 12
     doc.setFont('times', 'normal')
     doc.setFontSize(12)
     doc.setTextColor('#374151')
@@ -813,7 +803,6 @@ function Procurement() {
     doc.setFont('times', 'normal')
     doc.text(`Rp ${Number(selectedRequest.total_cost).toLocaleString('id-ID')}`, leftCol + valueOffset, yPos)
 
-    // Image attachment
     if (selectedRequest.attachment) {
       yPos += 18
       doc.setFont('times', 'bold')
@@ -834,7 +823,6 @@ function Procurement() {
       }
     }
 
-    // Items table - Times New Roman, size 12
     yPos += 8
     doc.setFont('times', 'bold')
     doc.setFontSize(14)
@@ -881,7 +869,6 @@ function Procurement() {
       }
     })
 
-    // Rejection reason if rejected
     if (selectedRequest.status === 'Rejected' && selectedRequest.rejection_reason) {
       const finalY = doc.lastAutoTable.finalY + 18
       doc.setFont('times', 'bold')
@@ -895,7 +882,6 @@ function Procurement() {
       doc.text(splitReason, leftCol, finalY + 10)
     }
 
-    // Footer - Times New Roman, size 10
     doc.setFont('times', 'normal')
     doc.setFontSize(10)
     doc.setTextColor('#9CA3AF')
@@ -1067,19 +1053,16 @@ function Procurement() {
   const validateForm = () => {
     const errors = {}
     
-    // Validate vendor
     if (!vendorSearchTerm) {
       errors.vendor = 'Vendor is required'
     } else if (!formData.vendor_id) {
       errors.vendor = 'This data doesn\'t exist. Click here'
     }
     
-    // Validate each item
     formData.items.forEach((item, index) => {
       if (!item.item_name) {
         errors[`item_name_${index}`] = 'Item name is required'
       } else {
-        // Check if item exists in database
         if (item.item_classification === 'Supplies') {
           if (!item.item_id) {
             errors[`item_name_${index}`] = 'This data doesn\'t exist. Click here'
@@ -1104,7 +1087,6 @@ function Procurement() {
     
     setFormErrors(errors)
     
-    // If there are errors, show missing data modal
     if (Object.keys(errors).length > 0) {
       setShowMissingDataModal(true)
       return false
@@ -2347,13 +2329,10 @@ function Procurement() {
                   <button
                     onClick={() => {
                       if (rejectionReason.trim()) {
-                        // Check if this is a Received status item (delete operation)
                         const request = procurementRequests.find(r => r.pr_id === rejectingPrId)
                         if (request && request.status === 'Received') {
-                          // For Received status, call handleDelete with rejection reason
                           handleDelete(rejectingPrId, rejectionReason)
                         } else {
-                          // For other statuses, call handleStatusChange
                           handleStatusChange(rejectingPrId, 'Rejected', rejectionReason)
                         }
                         setIsRejectModalOpen(false)

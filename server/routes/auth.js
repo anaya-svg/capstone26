@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-const SESSION_DURATION_SECONDS = 1800; // 30 minutes
+const SESSION_DURATION_SECONDS = 1800;
 
 const generateSessionToken = () => crypto.randomBytes(32).toString('hex');
 const getSessionExpiry = () => {
@@ -12,20 +12,16 @@ const getSessionExpiry = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
-// Temporary storage for unverified users (in-memory)
 const tempUsers = new Map();
 
-// Generate 5-digit verification code
 const generateVerificationCode = () => {
   return Math.floor(10000 + Math.random() * 90000).toString();
 };
 
-// Register User
 router.post('/register', (req, res) => {
   const { full_name, email, password, role, unique_code } = req.body;
   const db = req.app.locals.db;
 
-  // Validate company unique code for admin registration
   if (role === 'admin' && unique_code !== 'ITADMINREGISTERATION789') {
     return res.status(400).json({
       success: false,
@@ -33,7 +29,6 @@ router.post('/register', (req, res) => {
     });
   }
 
-  // Check if email already exists in database
   const checkQuery = `
     SELECT id, is_verified FROM users WHERE email = ?
   `;
@@ -47,14 +42,12 @@ router.post('/register', (req, res) => {
     }
 
     if (results.length > 0 && results[0].is_verified) {
-      // Email already exists and is verified
       return res.status(400).json({
         success: false,
         message: 'Email already registered'
       });
     }
 
-    // Hash password
     bcrypt.hash(password, 10, (err, hashedPassword) => {
       if (err) {
         return res.status(500).json({
@@ -65,7 +58,6 @@ router.post('/register', (req, res) => {
 
       const verificationCode = generateVerificationCode();
 
-      // Store user data temporarily (not in database yet)
       tempUsers.set(email, {
         full_name,
         email,
@@ -75,7 +67,6 @@ router.post('/register', (req, res) => {
         timestamp: Date.now()
       });
 
-      // Send verification email
       const transporter = req.app.locals.transporter;
       const mailOptions = {
         from: 'snapfunstudio@gmail.com',
@@ -114,11 +105,9 @@ router.post('/register', (req, res) => {
   });
 });
 
-// Resend Verification Code
 router.post('/resend-verification', (req, res) => {
   const { email } = req.body;
 
-  // Check if user exists in temporary storage
   const tempUser = tempUsers.get(email);
 
   if (!tempUser) {
@@ -128,17 +117,14 @@ router.post('/resend-verification', (req, res) => {
     });
   }
 
-  // Generate new verification code
   const newVerificationCode = generateVerificationCode();
 
-  // Update temporary storage with new code
   tempUsers.set(email, {
     ...tempUser,
     verificationCode: newVerificationCode,
-    timestamp: Date.now() // Reset timestamp
+    timestamp: Date.now()
   });
 
-  // Send verification email
   const transporter = req.app.locals.transporter;
   const mailOptions = {
     from: 'snapfunstudio@gmail.com',
@@ -175,12 +161,10 @@ router.post('/resend-verification', (req, res) => {
   });
 });
 
-// Verify Email
 router.post('/verify-email', (req, res) => {
   const { email, verification_code } = req.body;
   const db = req.app.locals.db;
 
-  // Check if user exists in temporary storage
   const tempUser = tempUsers.get(email);
 
   if (!tempUser) {
@@ -190,7 +174,6 @@ router.post('/verify-email', (req, res) => {
     });
   }
 
-  // Check if verification code is correct
   if (tempUser.verificationCode !== verification_code) {
     return res.status(400).json({
       success: false,
@@ -198,8 +181,7 @@ router.post('/verify-email', (req, res) => {
     });
   }
 
-  // Check if expired (24 hours)
-  const expirationTime = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+  const expirationTime = 24 * 60 * 60 * 1000;
   if (Date.now() - tempUser.timestamp > expirationTime) {
     tempUsers.delete(email);
     return res.status(400).json({
@@ -208,7 +190,6 @@ router.post('/verify-email', (req, res) => {
     });
   }
 
-  // Now save user to database (only after successful verification)
   const query = `
     INSERT INTO users (full_name, email, password, role, is_verified)
     VALUES (?, ?, ?, ?, TRUE)
@@ -222,7 +203,6 @@ router.post('/verify-email', (req, res) => {
       });
     }
 
-    // Remove from temporary storage
     tempUsers.delete(email);
 
     res.json({
@@ -232,7 +212,6 @@ router.post('/verify-email', (req, res) => {
   });
 });
 
-// Helper to return active session response payload
 const createSessionPayload = (user, token, expiresAt) => ({
   id: user.id,
   full_name: user.full_name,
@@ -328,17 +307,14 @@ const attemptLogin = (req, res, { email, password, role, force = false }) => {
   });
 };
 
-// Login
 router.post('/login', (req, res) => {
   attemptLogin(req, res, req.body);
 });
 
-// Force login - log out from other active device and use this device
 router.post('/force-login', (req, res) => {
   attemptLogin(req, res, { ...req.body, force: true });
 });
 
-// Verify session token
 router.post('/verify-session', (req, res) => {
   const { session_token } = req.body;
   const db = req.app.locals.db;
@@ -378,7 +354,6 @@ router.post('/verify-session', (req, res) => {
       });
     }
 
-    // Extend session on successful verification
     const newExpiresAt = getSessionExpiry();
     const extendQuery = `UPDATE users SET session_expires_at = ? WHERE id = ?`;
     db.query(extendQuery, [newExpiresAt, user.id], (err) => {
@@ -395,7 +370,6 @@ router.post('/verify-session', (req, res) => {
   });
 });
 
-// Logout
 router.post('/logout', (req, res) => {
   const { session_token } = req.body;
   const db = req.app.locals.db;
@@ -426,12 +400,10 @@ router.post('/logout', (req, res) => {
 
 module.exports = router;
 
-// Forgot Password - Send verification code
 router.post('/forgot-password', (req, res) => {
   const { email } = req.body;
   const db = req.app.locals.db;
 
-  // Check if email exists
   const checkQuery = `SELECT id, full_name, email, role FROM users WHERE email = ? AND status = 'active'`;
   
   db.query(checkQuery, [email], (err, results) => {
@@ -453,7 +425,6 @@ router.post('/forgot-password', (req, res) => {
     const user = results[0];
     const verificationCode = generateVerificationCode();
 
-    // Update verification code in database
     const updateQuery = `UPDATE users SET verification_code = ? WHERE email = ?`;
     
     db.query(updateQuery, [verificationCode, email], (err) => {
@@ -465,7 +436,6 @@ router.post('/forgot-password', (req, res) => {
         });
       }
 
-      // Send email with verification code
       const mailOptions = {
         from: 'snapfunstudio@gmail.com',
         to: email,
@@ -502,7 +472,6 @@ router.post('/forgot-password', (req, res) => {
   });
 });
 
-// Verify Code
 router.post('/verify-code', (req, res) => {
   const { email, verification_code } = req.body;
   const db = req.app.locals.db;
@@ -539,12 +508,10 @@ router.post('/verify-code', (req, res) => {
   });
 });
 
-// Reset Password
 router.post('/reset-password', (req, res) => {
   const { email, code, new_password } = req.body;
   const db = req.app.locals.db;
 
-  // Verify code first
   const verifyQuery = `SELECT id FROM users WHERE email = ? AND verification_code = ? AND status = 'active'`;
   
   db.query(verifyQuery, [email, code], (err, results) => {
@@ -563,7 +530,6 @@ router.post('/reset-password', (req, res) => {
       });
     }
 
-    // Hash new password
     bcrypt.hash(new_password, 10, (err, hashedPassword) => {
       if (err) {
         console.error('Error hashing password:', err);
@@ -573,7 +539,6 @@ router.post('/reset-password', (req, res) => {
         });
       }
 
-      // Update password and clear verification code
       const updateQuery = `UPDATE users SET password = ?, verification_code = NULL WHERE email = ?`;
       
       db.query(updateQuery, [hashedPassword, email], (err) => {

@@ -2,10 +2,8 @@ const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const router = express.Router();
 
-// Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// System instruction for SnapFunny
 const SYSTEM_INSTRUCTION = `You are SnapFunny, the friendly and intelligent AI assistant for SnapFun Resource System.
 You have two main roles:
 1. Answer casual, everyday questions in a friendly and engaging way
@@ -136,14 +134,11 @@ function buildPredictiveInsights(systemData) {
   };
 }
 
-// Fallback response function for when AI API is unavailable
 function getFallbackResponse(message, data) {
   const lowerMessage = message.toLowerCase();
 
-  // Detect language (simple heuristic)
   const isIndonesian = /halo|hai|apa|bagaimana|bisa|tidak|ya|ada|berapa|berapa banyak|saya|aku|kamu|anda|tolong|bantu|pelanggan|acara|aset|stok|pembelian|bahasa|indonesia|siapa/.test(lowerMessage);
 
-  // Export/download requests
   if (lowerMessage.includes('download') || lowerMessage.includes('excel') || lowerMessage.includes('csv') || lowerMessage.includes('export')) {
     let module = null;
     if (lowerMessage.includes('procurement') || lowerMessage.includes('purchasing') || lowerMessage.includes('pembelian') || lowerMessage.includes('purchase')) module = 'procurement';
@@ -156,7 +151,6 @@ function getFallbackResponse(message, data) {
     if (module) {
       const filters = {};
       
-      // Extract status
       const statusMatch = message.match(/status(?:nya|-nya)?(?:\s+(?:sudah|adalah|is|are|=|:))?\s+([A-Za-z][A-Za-z\s]*)/i);
       if (statusMatch) {
         const rawStatus = statusMatch[1].trim();
@@ -166,20 +160,17 @@ function getFallbackResponse(message, data) {
         else filters.status = rawStatus;
       }
 
-      // Extract condition for assets
       if (module === 'assets') {
         const condMatch = message.match(/kondisi(?:\s+(?:adalah|is|=|:))?\s+([A-Za-z]+)/i) || message.match(/condition(?:\s+(?:is|=|:))?\s+([A-Za-z]+)/i);
         if (condMatch) {
           const rawCond = condMatch[1].trim();
           filters.condition = rawCond.charAt(0).toUpperCase() + rawCond.slice(1).toLowerCase();
         } else {
-          // Check keywords
           if (lowerMessage.includes('good') || lowerMessage.includes('bagus')) filters.condition = 'Good';
           else if (lowerMessage.includes('fair') || lowerMessage.includes('cukup')) filters.condition = 'Fair';
           else if (lowerMessage.includes('poor') || lowerMessage.includes('rusak')) filters.condition = 'Poor';
         }
 
-        // Check categories
         const categories = [];
         if (lowerMessage.includes('camera gear') || lowerMessage.includes('kamera')) categories.push('Camera Gear');
         if (lowerMessage.includes('computer') || lowerMessage.includes('komputer')) categories.push('Computers');
@@ -189,17 +180,14 @@ function getFallbackResponse(message, data) {
           filters.category = categories.join(',');
         }
 
-        // Check locations
         if (lowerMessage.includes('studio a')) filters.location = 'Studio A';
         else if (lowerMessage.includes('studio b')) filters.location = 'Studio B';
         else if (lowerMessage.includes('warehouse') || lowerMessage.includes('gudang')) filters.location = 'Warehouse';
       }
 
-      // Smart date extraction
       let startDate = null;
       let endDate = null;
 
-      // Extract all YYYY-MM-DD dates
       const allDates = [...message.matchAll(/(\d{4}-\d{2}-\d{2})/g)].map(m => m[1]);
       if (allDates.length >= 2) {
         startDate = allDates[0];
@@ -208,7 +196,6 @@ function getFallbackResponse(message, data) {
         startDate = allDates[0];
       }
 
-      // If no YYYY-MM-DD matches, check for custom written dates (e.g. "Januari 1 2026", "January 1 2026", "1 Jan 2026")
       if (!startDate) {
         const months = {
           jan: '01', januari: '01', january: '01',
@@ -225,7 +212,6 @@ function getFallbackResponse(message, data) {
           des: '12', desember: '12', december: '12'
         };
 
-        // Regexp to match patterns like "Januari 1 2026" or "1 Januari 2026" or "Jan 1, 2026"
         const writtenDateRegex = /(?:(\d{1,2})\s+)?([A-Za-z]+)\s+(\d{1,2})?,?\s*(\d{4})/g;
         const matches = [...message.matchAll(writtenDateRegex)];
         const parsedDates = [];
@@ -249,7 +235,6 @@ function getFallbackResponse(message, data) {
         }
       }
 
-      // Check relative dates like "hari ini" or "today"
       if (lowerMessage.includes('hari ini') || lowerMessage.includes('today')) {
         const todayStr = new Date().toISOString().slice(0, 10);
         if (startDate && !endDate) {
@@ -260,7 +245,6 @@ function getFallbackResponse(message, data) {
         }
       }
 
-      // Assign to filters
       if (startDate) {
         if (module === 'procurement') filters.createdAt = startDate;
         else filters.startDate = startDate;
@@ -284,14 +268,12 @@ function getFallbackResponse(message, data) {
     }
   }
 
-  // Simple greeting responses
   if (lowerMessage.includes('hi') || lowerMessage.includes('hello') || lowerMessage.includes('halo') || lowerMessage.includes('hai')) {
     return isIndonesian
       ? 'Halo! Aku **SnapFunny**, asisten AI untuk **SnapFun Resource System**. Ada yang bisa aku bantu? Kamu bisa tanya tentang customers, events, assets, inventory, atau procurement. Atau sekadar ngobrol santai! 😊'
       : 'Hello! I am **SnapFunny**, the AI assistant for **SnapFun Resource System**. How can I help you today? You can ask me about customers, events, assets, inventory, or procurement. Or we can just chat! 😊';
   }
 
-  // Casual responses for everyday topics
   if (lowerMessage.includes('lapar') || lowerMessage.includes('hungry')) {
     return isIndonesian
       ? 'Lapar ya? Mending makan dulu, biar semangat kerjanya! 🍕 Ada ide mau makan apa?'
@@ -334,14 +316,12 @@ function getFallbackResponse(message, data) {
       : 'I\'m **SnapFunny**, the AI assistant for **SnapFun Resource System**. I can help you with customer, event, asset, inventory, and procurement data. Or we can just chat! 😊';
   }
   
-  // Language-related queries
   if (lowerMessage.includes('bahasa') || lowerMessage.includes('language') || lowerMessage.includes('english')) {
     return isIndonesian
       ? 'Ya, aku bisa berbahasa Indonesia dan Inggris! Silakan tanya dalam bahasa apa saja yang kamu mau.'
       : 'Yes, I can speak both English and Indonesian! Feel free to ask your questions in either language.';
   }
 
-  // Maintenance recommendation queries
   if (
     lowerMessage.includes('maintenance') ||
     lowerMessage.includes('maintanance') ||
@@ -373,7 +353,6 @@ function getFallbackResponse(message, data) {
       : `Here are asset maintenance recommendations (based on status & asset age):\n\n${list}\n\nSuggestion: prioritize assets that are frequently **In Use** or already in **Maintenance** status.`;
   }
   
-  // Customer-related queries
   if (lowerMessage.includes('customer') || lowerMessage.includes('pelanggan') || lowerMessage.includes('siapa saja') || lowerMessage.includes('siapa aja')) {
     const customers = data.customers || [];
     const inStudioCustomers = customers.filter(c => c.is_in_studio);
@@ -409,7 +388,6 @@ function getFallbackResponse(message, data) {
       : `There are currently **${customerCount}** customers in the system. **${inStudioCustomers.length}** In Studio and **${offSiteCustomers.length}** Off Site. You can ask specifically *"who are the in studio customers?"*`;
   }
   
-  // Event-related queries
   if (lowerMessage.includes('event') || lowerMessage.includes('acara')) {
     const events = data.events || [];
     const completed = events.filter(e => e.status?.toLowerCase() === 'completed');
@@ -433,7 +411,6 @@ function getFallbackResponse(message, data) {
       : `There are currently **${events.length}** events in the system. **${completed.length}** completed, **${upcoming.length}** upcoming, and **${inProgress.length}** in progress.`;
   }
   
-  // Asset-related queries
   if (lowerMessage.includes('asset') || lowerMessage.includes('aset')) {
     const assets = data.assets || [];
     const available = assets.filter(a => a.status === 'Available');
@@ -443,7 +420,6 @@ function getFallbackResponse(message, data) {
       : `There are currently **${assets.length}** assets: **${available.length}** Available and **${inUse.length}** In Use.`;
   }
   
-  // Inventory-related queries
   if (lowerMessage.includes('inventory') || lowerMessage.includes('stok') || lowerMessage.includes('stock')) {
     const inventory = data.inventory || [];
     const lowStock = inventory.filter(i => i.stock_quantity <= i.minimum_stock);
@@ -466,7 +442,6 @@ function getFallbackResponse(message, data) {
       : `There are **${inventory.length}** items in inventory. **${lowStock.length}** low stock, **${noStock.length}** out of stock.`;
   }
 
-  // Inventory trend analysis queries
   if (
     lowerMessage.includes('fast-moving') ||
     lowerMessage.includes('fast moving') ||
@@ -498,7 +473,6 @@ function getFallbackResponse(message, data) {
       : `Fast-moving inventory trend (based on stock gap vs minimum):\n\n${list}\n\nRecommendation: prioritize items with the largest gaps.`;
   }
 
-  // Financial summary queries
   if (
     lowerMessage.includes('ringkasan finansial') ||
     lowerMessage.includes('financial summary') ||
@@ -551,7 +525,6 @@ function getFallbackResponse(message, data) {
       : `This month's financial summary:\n\n- Total revenue: **Rp ${Number(currentSummary.totalRevenue).toLocaleString('id-ID')}**\n- Total events: **${currentSummary.count}**\n- Off-Site contribution: **Rp ${Number(currentSummary.offSiteRevenue).toLocaleString('id-ID')}**\n- Vs last month: **${diffText}**\n\nRecommendation: prioritize promotions on the strongest Off-Site services.`;
   }
 
-  // Predictive / planning queries
   if (
     lowerMessage.includes('prediksi') ||
     lowerMessage.includes('prediction') ||
@@ -581,13 +554,11 @@ function getFallbackResponse(message, data) {
       : `Current operational prediction:\n\n- Risk level: **${predictive.operationalRiskLevel}**\n- Events in next 30 days: **${predictive.events?.next30DaysEventsCount || 0}**\n- Active procurement requests: **${predictive.procurement?.activeProcurementCount || 0}**\n\nTop restock priorities:\n${topList}\n\nRecommendation: prioritize restocking the items above before event workload increases.`;
   }
   
-  // Default response
   return isIndonesian
     ? 'Maaf, Google API sedang limit (Quotas Exhausted). Namun aku berhasil mengambil data langsung dari sistem database:\n\nSilakan tanya tentang: **customers**, **events**, **assets**, **inventory**, atau **procurement**.'
     : 'I apologize, but Google API is currently hitting rate limits. However, I fetched current records directly from your database:\n\nYou can ask details about **customers**, **events**, **assets**, **inventory**, or **procurement**.';
 }
 
-// POST chat with SnapFunny AI
 router.post('/chat', async (req, res) => {
   const db = req.app.locals.db;
   const { message } = req.body;
@@ -597,51 +568,43 @@ router.post('/chat', async (req, res) => {
   }
 
   try {
-    // Fetch all relevant data from the database
     const dataPromises = [
-      // Customers data (excluding passwords)
       new Promise((resolve, reject) => {
         db.query('SELECT customer_id, name, phone_number, email, total_visits, last_visit_date, total_spending, is_in_studio, is_off_site FROM customers', (err, results) => {
           if (err) reject(err);
           else resolve({ customers: results });
         });
       }),
-      // Events data
       new Promise((resolve, reject) => {
         db.query('SELECT event_id, event_name, customer, start_date, end_date, location, status, expected_revenue, created_at FROM events', (err, results) => {
           if (err) reject(err);
           else resolve({ events: results });
         });
       }),
-      // Assets data
       new Promise((resolve, reject) => {
         db.query('SELECT asset_id, name, status, quantity, created_at FROM assets', (err, results) => {
           if (err) reject(err);
           else resolve({ assets: results });
         });
       }),
-      // Inventory data
       new Promise((resolve, reject) => {
         db.query('SELECT item_id, item_name, stock_quantity, minimum_stock, uom, created_at FROM inventory', (err, results) => {
           if (err) reject(err);
           else resolve({ inventory: results });
         });
       }),
-      // Procurement requests data
       new Promise((resolve, reject) => {
         db.query('SELECT pr_id, requested_by, status, total_cost, created_at FROM procurement_requests', (err, results) => {
           if (err) reject(err);
           else resolve({ procurement: results });
         });
       }),
-      // Categories data
       new Promise((resolve, reject) => {
         db.query('SELECT category_id, category_name FROM categories', (err, results) => {
           if (err) reject(err);
           else resolve({ categories: results });
         });
       }),
-      // Customer visits data
       new Promise((resolve, reject) => {
         db.query('SELECT visit_id, customer_id, visit_date, spending FROM customer_visits', (err, results) => {
           if (err) reject(err);
@@ -654,7 +617,6 @@ router.post('/chat', async (req, res) => {
     const systemData = Object.assign({}, ...allData);
     systemData.predictiveInsights = buildPredictiveInsights(systemData);
 
-    // Try to use Gemini AI with multiple model name variations
     const modelNamesToTry = [
       "gemini-2.5-flash",
       "gemini-1.5-flash",
@@ -678,10 +640,10 @@ router.post('/chat', async (req, res) => {
         usedModel = modelName;
         
         console.log(`[SnapFunny] Success! Response received using model: ${usedModel}`);
-        break; // Exit loop if successful
+        break;
       } catch (err) {
         console.error(`[SnapFunny] Model ${modelName} failed:`, err.message);
-        continue; // Try next model
+        continue;
       }
     }
 
@@ -694,7 +656,6 @@ router.post('/chat', async (req, res) => {
       });
     }
 
-    // Fallback to rule-based responses if all AI attempts fail
     console.log('[SnapFunny] All AI attempts failed, using rule-based fallback.');
     const fallbackResponse = getFallbackResponse(message, systemData);
     return res.json({

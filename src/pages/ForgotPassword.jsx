@@ -9,7 +9,7 @@ function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [messageType, setMessageType] = useState('') // 'success' or 'error'
+  const [messageType, setMessageType] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -31,10 +31,8 @@ function ForgotPassword() {
       if (data.success) {
         setMessage('Verification code sent to your email. Please check your inbox.')
         setMessageType('success')
-        // Store email in sessionStorage for next steps
         sessionStorage.setItem('reset_email', email)
         
-        // Redirect to email verification page with forgot-password mode
         setTimeout(() => {
           navigate('/email-verification', {
             state: {

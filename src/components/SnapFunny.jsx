@@ -16,7 +16,6 @@ const QUICK_PROMPTS = [
 function SnapFunny() {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState(() => {
-    // Load messages from sessionStorage on initialization (session-based)
     const savedMessages = sessionStorage.getItem('snapfunny_chat_history')
     return savedMessages ? JSON.parse(savedMessages) : []
   })
@@ -24,7 +23,6 @@ function SnapFunny() {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef(null)
 
-  // Draggable position state (distance from right/bottom in pixels)
   const [position, setPosition] = useState(() => {
     const savedPosition = sessionStorage.getItem('snapfunny_position')
     return savedPosition ? JSON.parse(savedPosition) : { right: 24, bottom: 24 }
@@ -33,14 +31,12 @@ function SnapFunny() {
   const dragOffsetRef = useRef({ x: 0, y: 0 })
   const hasDraggedRef = useRef(false)
 
-  // Save messages to sessionStorage whenever they change
   useEffect(() => {
     if (messages.length > 0) {
       sessionStorage.setItem('snapfunny_chat_history', JSON.stringify(messages))
     }
   }, [messages])
 
-  // Save position to sessionStorage whenever it changes
   useEffect(() => {
     sessionStorage.setItem('snapfunny_position', JSON.stringify(position))
   }, [position])
@@ -98,14 +94,11 @@ function SnapFunny() {
     handleSendMessage(prompt)
   }
 
-  // Custom renderer for download links
   const renderMessageContent = (content) => {
-    // Find all download links and replace them with unique placeholders
     const downloadLinks = []
     let processedContent = content
     let matchIndex = 0
     
-    // Replace download links with placeholders - more robust regex
     processedContent = processedContent.replace(/\[([^\]]+)\]\((download:[^)]+)\)/g, (match, linkText, href) => {
       const placeholder = `__DOWNLOAD_LINK_${matchIndex}__`
       console.log('Found download link:', { match, linkText, href })
@@ -114,11 +107,9 @@ function SnapFunny() {
       return placeholder
     })
     
-    // Split by placeholders
     const parts = processedContent.split(/(__DOWNLOAD_LINK_\d+__)/g)
     
     return parts.map((part, index) => {
-      // Check if this part is a placeholder
       const linkMatch = part.match(/__DOWNLOAD_LINK_(\d+)__/)
       if (linkMatch) {
         const linkIndex = parseInt(linkMatch[1])
@@ -150,12 +141,10 @@ function SnapFunny() {
         }
       }
       
-      // Skip empty parts
       if (!part.trim()) {
         return null
       }
       
-      // Regular markdown content
       return (
         <ReactMarkdown
           key={index}
@@ -166,7 +155,6 @@ function SnapFunny() {
             ol: ({node, ...props}) => <ol className="list-decimal ml-4 my-2" {...props} />,
             li: ({node, ...props}) => <li className="mb-1" {...props} />,
             a: ({node, href, children, ...props}) => {
-              // Skip download links here as they're handled above
               if (href && href.startsWith('download:')) {
                 return null
               }
@@ -260,7 +248,6 @@ function SnapFunny() {
           className="fixed w-96 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200"
           style={{ right: position.right, bottom: position.bottom + 80 }}
         >
-          {/* Header */}
           <div
             className="bg-gradient-to-r from-purple-800 to-indigo-800 text-white p-4 flex items-center justify-between cursor-move"
             onMouseDown={handleMouseDown}
@@ -281,7 +268,6 @@ function SnapFunny() {
             </button>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {messages.map((message, index) => (
               <div
@@ -315,7 +301,6 @@ function SnapFunny() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div className="p-4 bg-white border-t border-gray-200">
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {QUICK_PROMPTS.map((prompt) => (
@@ -352,13 +337,12 @@ function SnapFunny() {
         </div>
       )}
 
-      {/* Floating Button */}
       <button
         onClick={toggleChat}
         onMouseDown={handleMouseDown}
         onTouchStart={handleMouseDown}
         style={{ right: position.right, bottom: position.bottom }}
-        className={`fixed flex items-center gap-3 bg-gradient-to-r from-purple-800 to-indigo-800 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`fixed flex items-center gap-3 bg-gradient-to-r from-purple-800 to-indigo-800 text-white px-5 py-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 \${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       >
         <img src="/snapfun_mascot.png" alt="SnapFunny" className="w-8 h-8 rounded-full object-cover" />
         <span className="font-semibold text-sm">Ask me!</span>

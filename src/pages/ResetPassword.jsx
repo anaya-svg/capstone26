@@ -14,7 +14,7 @@ function ResetPassword() {
   const [passwordComplexityError, setPasswordComplexityError] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [messageType, setMessageType] = useState('') // 'success' or 'error'
+  const [messageType, setMessageType] = useState('')
 
   const validatePassword = (value) => {
     if (!value) {
@@ -57,7 +57,6 @@ function ResetPassword() {
     const value = e.target.value
     setConfirmPassword(value)
     
-    // Clear error when passwords match
     if (newPassword && value && newPassword === value) {
       setPasswordError('')
     } else if (newPassword && value && newPassword !== value) {
@@ -71,13 +70,11 @@ function ResetPassword() {
     setMessage('')
     setMessageType('')
 
-    // Validate password complexity
     if (passwordComplexityError) {
       setLoading(false)
       return
     }
 
-    // Validate passwords match
     if (newPassword !== confirmPassword) {
       setPasswordError('Passwords do not match')
       setLoading(false)
@@ -120,11 +117,9 @@ function ResetPassword() {
         setMessage('Password reset successfully! Redirecting to login...')
         setMessageType('success')
         
-        // Clear sessionStorage
         sessionStorage.removeItem('reset_email')
         sessionStorage.removeItem('reset_code')
         
-        // Redirect to login page after 2 seconds
         setTimeout(() => {
           navigate('/login')
         }, 2000)

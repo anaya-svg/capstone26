@@ -42,7 +42,6 @@ function Dashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState([])
   const [recentProcurement, setRecentProcurement] = useState([])
   
-  // Accounting report modal state
   const [showAccountingModal, setShowAccountingModal] = useState(false)
 
   const handleBackdropClose = (e, onClose) => {
@@ -103,37 +102,31 @@ function Dashboard() {
       }
     }
 
-    // Fetch summary data
     const summaryData = await safeFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/dashboard/summary`)
     if (summaryData?.success) {
       setSummary(summaryData.data)
     }
 
-    // Fetch low stock items
     const lowStockData = await safeFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/dashboard/low-stock`)
     if (lowStockData?.success) {
       setLowStockItems(lowStockData.data)
     }
 
-    // Fetch predictive stock items
     const predictiveStockData = await safeFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/dashboard/predictive-stock`)
     if (predictiveStockData?.success) {
       setPredictiveStock(predictiveStockData.data)
     }
 
-    // Fetch revenue trend
     const revenueTrendData = await safeFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/dashboard/revenue-trend`)
     if (revenueTrendData?.success) {
       setRevenueTrend(revenueTrendData.data)
     }
 
-    // Fetch upcoming events
     const upcomingEventsData = await safeFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/dashboard/upcoming-events`)
     if (upcomingEventsData?.success) {
       setUpcomingEvents(upcomingEventsData.data)
     }
 
-    // Fetch recent procurement requests
     const recentProcurementData = await safeFetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/dashboard/recent-procurement`)
     if (recentProcurementData?.success) {
       setRecentProcurement(recentProcurementData.data)
@@ -148,7 +141,7 @@ function Dashboard() {
     const recommendedQty = Math.max(minimumStock - currentStock, 1)
     setSelectedAutoDraftItem({
       ...item,
-      stock_quantity: currentStock // set so backend/handlers can read it in the same property if needed
+      stock_quantity: currentStock
     })
     setAutoDraftQtyInput(String(recommendedQty))
     setShowAutoDraftModal(true)
@@ -354,7 +347,6 @@ function Dashboard() {
     }
   }
 
-  // Custom Tooltip component to beautifully separate Actual and Projected data without clutter
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
@@ -401,7 +393,6 @@ function Dashboard() {
     return null
   }
 
-  // Process chart data for smooth rendering of actual vs projected trends
   const formattedChartData = revenueTrend.map((item, idx) => {
     const isLastActual = !item.is_projection && (revenueTrend[idx + 1]?.is_projection);
     return {
@@ -415,7 +406,6 @@ function Dashboard() {
     }
   });
 
-  // Calculate dynamic AI financial advice based on the projections
   const getAiFinancialInsights = () => {
     if (revenueTrend.length === 0) return null;
 
@@ -430,11 +420,10 @@ function Dashboard() {
     const revenueChange = ((firstProjMonth.total_revenue - lastActualMonth.total_revenue) / lastActualMonth.total_revenue) * 100;
     const isRevenueDropping = firstProjMonth.total_revenue < lastActualMonth.total_revenue;
 
-    // Detect if offsite bookings are particularly low in any projection month
     const lowOffsiteMonth = projections.find(p => p.off_site_revenue === 0 || p.off_site_revenue < 3000000);
 
     let advice = "";
-    let alertType = "info"; // info, warning, success
+    let alertType = "info"; 
 
     if (isRevenueDropping) {
       alertType = "warning";

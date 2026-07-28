@@ -4,7 +4,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Configure multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '../asset_attachment');
@@ -22,7 +21,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024
   },
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -37,7 +36,6 @@ const upload = multer({
   }
 });
 
-// GET all assets with filters
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
   const { status, category, search, page = 1, limit = 10 } = req.query;
@@ -51,7 +49,6 @@ router.get('/', (req, res) => {
   const params = [];
   const countParams = [];
 
-  // Filter by status
   if (status) {
     if (status === 'All Active Assets') {
       query += ' AND status IN ("Available", "In Use", "Maintenance")';
@@ -63,12 +60,10 @@ router.get('/', (req, res) => {
       countParams.push(status);
     }
   } else {
-    // If no status specified, show only active assets (exclude Deleted and Drafted)
     query += ' AND status IN ("Available", "In Use", "Maintenance")';
     countQuery += ' AND status IN ("Available", "In Use", "Maintenance")';
   }
 
-  // Filter by category
   if (category) {
     query += ' AND category = ?';
     countQuery += ' AND category = ?';
@@ -76,7 +71,6 @@ router.get('/', (req, res) => {
     countParams.push(category);
   }
 
-  // Search by asset name
   if (search) {
     query += ' AND name LIKE ?';
     countQuery += ' AND name LIKE ?';
@@ -87,7 +81,6 @@ router.get('/', (req, res) => {
   query += ' ORDER BY created_at DESC';
   query += ` LIMIT ${limitNum} OFFSET ${offset}`;
 
-  // Get total count
   db.query(countQuery, countParams, (err, countResult) => {
     if (err) {
       console.error('Error counting assets:', err);
@@ -99,7 +92,6 @@ router.get('/', (req, res) => {
 
     const total = countResult[0].total;
 
-    // Get paginated data
     db.query(query, params, (err, results) => {
       if (err) {
         console.error('Error fetching assets:', err);
@@ -121,7 +113,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// GET assets summary
 router.get('/summary', (req, res) => {
   const db = req.app.locals.db;
 
@@ -152,7 +143,6 @@ router.get('/summary', (req, res) => {
   });
 });
 
-// GET all assets for export (supports multi-select filters, no pagination)
 router.get('/export', (req, res) => {
   const db = req.app.locals.db;
   const { status, category, condition, location, search } = req.query;
@@ -195,7 +185,6 @@ router.get('/export', (req, res) => {
   });
 });
 
-// GET active assets for search (Available, In Use, Maintenance only)
 router.get('/active', (req, res) => {
   const db = req.app.locals.db;
   const { search } = req.query;
@@ -207,7 +196,6 @@ router.get('/active', (req, res) => {
   `;
   const params = [];
 
-  // Search by asset name
   if (search) {
     query += ' AND name LIKE ?';
     params.push(`%${search}%`);
@@ -224,7 +212,6 @@ router.get('/active', (req, res) => {
       });
     }
 
-    // Check each asset for active event usage
     const assetsWithStatus = results.map(asset => {
       const eventUsageQuery = `
         SELECT e.event_id, e.status
@@ -240,14 +227,12 @@ router.get('/active', (req, res) => {
             resolve(asset);
           } else {
             if (eventResults.length > 0) {
-              // Check if ANY event has in_progress or upcoming status
               const hasActiveEvent = eventResults.some(event => {
                 const eventStatus = event.status.toLowerCase();
                 return eventStatus === 'in_progress' || eventStatus === 'upcoming';
               });
               
               if (hasActiveEvent) {
-                // Asset is in use in an active event
                 const activeEvent = eventResults.find(event => {
                   const eventStatus = event.status.toLowerCase();
                   return eventStatus === 'in_progress' || eventStatus === 'upcoming';
@@ -277,7 +262,6 @@ router.get('/active', (req, res) => {
   });
 });
 
-// GET single asset by ID
 router.get('/:asset_id', (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
@@ -302,7 +286,6 @@ router.get('/:asset_id', (req, res) => {
 
     const asset = results[0];
 
-    // Check if asset is in use in active events (Upcoming or In Progress)
     const eventUsageQuery = `
       SELECT e.event_id, e.status
       FROM event_assets ea
@@ -320,14 +303,12 @@ router.get('/:asset_id', (req, res) => {
       }
 
       if (eventResults.length > 0) {
-        // Check if ANY event has in_progress or upcoming status
         const hasActiveEvent = eventResults.some(event => {
           const eventStatus = event.status.toLowerCase();
           return eventStatus === 'in_progress' || eventStatus === 'upcoming';
         });
         
         if (hasActiveEvent) {
-          // Asset is in use in an active event
           const activeEvent = eventResults.find(event => {
             const eventStatus = event.status.toLowerCase();
             return eventStatus === 'in_progress' || eventStatus === 'upcoming';
@@ -351,7 +332,6 @@ router.get('/:asset_id', (req, res) => {
   });
 });
 
-// GET events for a specific asset (upcoming and in-progress)
 router.get('/:asset_id/events', (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
@@ -381,14 +361,11 @@ router.get('/:asset_id/events', (req, res) => {
   });
 });
 
-// POST create new asset
 router.post('/', upload.single('photo_attachment'), (req, res) => {
   const db = req.app.locals.db;
   const { name, category, status, location, condition, quantity, has_barcode } = req.body;
   const photo_attachment = req.file ? `/asset_attachment/${req.file.filename}` : null;
 
-  // Check if asset name already exists (case-insensitive, excluding deleted assets)
-  const checkQuery = 'SELECT * FROM assets WHERE LOWER(name) = LOWER(?) AND status NOT IN ("Deleted", "Deleted Draft")';
   db.query(checkQuery, [name], (err, results) => {
     if (err) {
       console.error('Error checking asset name:', err);
@@ -419,7 +396,6 @@ router.post('/', upload.single('photo_attachment'), (req, res) => {
         });
       }
 
-      // Get the created asset with asset_id
       const selectQuery = 'SELECT * FROM assets WHERE asset_id = ?';
       db.query(selectQuery, [result.insertId], (err, results) => {
         if (err) {
@@ -440,15 +416,12 @@ router.post('/', upload.single('photo_attachment'), (req, res) => {
   });
 });
 
-// PUT update asset
 router.put('/:asset_id', upload.single('photo_attachment'), (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
   const { name, category, status, location, condition, quantity, has_barcode } = req.body;
   const photo_attachment = req.file ? `/asset_attachment/${req.file.filename}` : null;
 
-  // Check if asset name already exists (excluding current asset and deleted assets, case-insensitive)
-  const checkQuery = 'SELECT * FROM assets WHERE LOWER(name) = LOWER(?) AND asset_id != ? AND status NOT IN ("Deleted", "Deleted Draft")';
   db.query(checkQuery, [name, asset_id], (err, results) => {
     if (err) {
       console.error('Error checking asset name:', err);
@@ -465,7 +438,6 @@ router.put('/:asset_id', upload.single('photo_attachment'), (req, res) => {
       });
     }
 
-    // Get current asset to check for existing photo
     const getCurrentQuery = 'SELECT * FROM assets WHERE asset_id = ?';
     db.query(getCurrentQuery, [asset_id], (err, results) => {
       if (err) {
@@ -501,7 +473,6 @@ router.put('/:asset_id', upload.single('photo_attachment'), (req, res) => {
           });
         }
 
-        // Get updated asset
         const selectQuery = 'SELECT * FROM assets WHERE asset_id = ?';
         db.query(selectQuery, [asset_id], (err, results) => {
           if (err) {
@@ -523,12 +494,10 @@ router.put('/:asset_id', upload.single('photo_attachment'), (req, res) => {
   });
 });
 
-// PUT draft asset
 router.put('/:asset_id/draft', (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
 
-  // Check if asset is in use in active events
   const eventUsageQuery = `
     SELECT e.event_id, e.event_name, e.customer, e.status, ea.quantity
     FROM event_assets ea
@@ -537,11 +506,10 @@ router.put('/:asset_id/draft', (req, res) => {
     AND e.status IN ('upcoming', 'in_progress')
   `;
 
-  // Check if asset is in use in active procurement requests
   const procurementUsageQuery = `
     SELECT pr.pr_id, pri.quantity, pr.status
     FROM procurement_request_items pri
-    JOIN procurement_requests pr ON pri.pr_id = pr.pr_id
+    JOIN procurement_requests pr ON pr.pr_id = pri.pr_id
     WHERE pri.asset_id = ?
     AND pr.status IN ('Waiting Approval', 'Approved')
   `;
@@ -571,7 +539,6 @@ router.put('/:asset_id/draft', (req, res) => {
 
       procurementUsage = procurementResults;
 
-      // If asset is in use, return error with usage details
       if (eventUsage.length > 0 || procurementUsage.length > 0) {
         const usageDetails = [];
 
@@ -606,7 +573,6 @@ router.put('/:asset_id/draft', (req, res) => {
         });
       }
 
-      // Proceed with draft
       const query = 'UPDATE assets SET status = "Drafted" WHERE asset_id = ?';
 
       db.query(query, [asset_id], (err, result) => {
@@ -625,7 +591,6 @@ router.put('/:asset_id/draft', (req, res) => {
           });
         }
 
-        // Get updated asset
         const selectQuery = 'SELECT * FROM assets WHERE asset_id = ?';
         db.query(selectQuery, [asset_id], (err, results) => {
           if (err) {
@@ -647,7 +612,6 @@ router.put('/:asset_id/draft', (req, res) => {
   });
 });
 
-// PUT undraft asset
 router.put('/:asset_id/undraft', (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
@@ -670,7 +634,6 @@ router.put('/:asset_id/undraft', (req, res) => {
       });
     }
 
-    // Get updated asset
     const selectQuery = 'SELECT * FROM assets WHERE asset_id = ?';
     db.query(selectQuery, [asset_id], (err, results) => {
       if (err) {
@@ -690,13 +653,11 @@ router.put('/:asset_id/undraft', (req, res) => {
   });
 });
 
-// PUT delete asset (soft delete)
 router.put('/:asset_id/delete', (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
   const { deleted_reason } = req.body;
 
-  // Check if asset is in use in active events
   const eventUsageQuery = `
     SELECT e.event_id, e.event_name, e.customer, e.status, ea.quantity
     FROM event_assets ea
@@ -705,7 +666,6 @@ router.put('/:asset_id/delete', (req, res) => {
     AND e.status IN ('upcoming', 'in_progress')
   `;
 
-  // Check if asset is in use in active procurement requests
   const procurementUsageQuery = `
     SELECT pr.pr_id, pri.quantity, pr.status
     FROM procurement_request_items pri
@@ -739,7 +699,6 @@ router.put('/:asset_id/delete', (req, res) => {
 
       procurementUsage = procurementResults;
 
-      // If asset is in use, return error with usage details
       if (eventUsage.length > 0 || procurementUsage.length > 0) {
         const usageDetails = [];
 
@@ -774,7 +733,6 @@ router.put('/:asset_id/delete', (req, res) => {
         });
       }
 
-      // Proceed with deletion
       const query = 'UPDATE assets SET status = "Deleted", deleted_reason = ? WHERE asset_id = ?';
 
       db.query(query, [deleted_reason, asset_id], (err, result) => {
@@ -793,7 +751,6 @@ router.put('/:asset_id/delete', (req, res) => {
           });
         }
 
-        // Get updated asset
         const selectQuery = 'SELECT * FROM assets WHERE asset_id = ?';
         db.query(selectQuery, [asset_id], (err, results) => {
           if (err) {
@@ -815,13 +772,11 @@ router.put('/:asset_id/delete', (req, res) => {
   });
 });
 
-// PUT delete drafted asset
 router.put('/:asset_id/delete-drafted', (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
   const { deleted_reason } = req.body;
 
-  // Check if asset is in use in active events
   const eventUsageQuery = `
     SELECT e.event_id, e.event_name, e.customer, e.status, ea.quantity
     FROM event_assets ea
@@ -830,7 +785,6 @@ router.put('/:asset_id/delete-drafted', (req, res) => {
     AND e.status IN ('upcoming', 'in_progress')
   `;
 
-  // Check if asset is in use in active procurement requests
   const procurementUsageQuery = `
     SELECT pr.pr_id, pri.quantity, pr.status
     FROM procurement_request_items pri
@@ -864,7 +818,6 @@ router.put('/:asset_id/delete-drafted', (req, res) => {
 
       procurementUsage = procurementResults;
 
-      // If asset is in use, return error with usage details
       if (eventUsage.length > 0 || procurementUsage.length > 0) {
         const usageDetails = [];
 
@@ -899,7 +852,6 @@ router.put('/:asset_id/delete-drafted', (req, res) => {
         });
       }
 
-      // Proceed with deletion
       const query = 'UPDATE assets SET status = "Deleted Draft", deleted_reason = ? WHERE asset_id = ?';
 
       db.query(query, [deleted_reason, asset_id], (err, result) => {
@@ -918,7 +870,6 @@ router.put('/:asset_id/delete-drafted', (req, res) => {
           });
         }
 
-        // Get updated asset
         const selectQuery = 'SELECT * FROM assets WHERE asset_id = ?';
         db.query(selectQuery, [asset_id], (err, results) => {
           if (err) {
@@ -940,26 +891,22 @@ router.put('/:asset_id/delete-drafted', (req, res) => {
   });
 });
 
-// Hard delete asset (permanently remove from database)
 router.delete('/:asset_id/hard-delete', (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
 
-  // Delete from event_assets if any references exist
   db.query('DELETE FROM event_assets WHERE asset_id = ?', [asset_id], (err) => {
     if (err) {
       console.error('Error deleting event assets:', err);
     }
   });
 
-  // Delete from procurement_request_items if any references exist
   db.query('DELETE FROM procurement_request_items WHERE asset_id = ?', [asset_id], (err) => {
     if (err) {
       console.error('Error deleting procurement request items:', err);
     }
   });
 
-  // Delete the asset
   const deleteAssetQuery = 'DELETE FROM assets WHERE asset_id = ?';
   db.query(deleteAssetQuery, [asset_id], (err, result) => {
     if (err) {

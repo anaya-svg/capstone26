@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 
-// GET all users
 router.get('/', (req, res) => {
   const db = req.app.locals.db;
   const { search, role, page = 1, limit = 10 } = req.query;
@@ -24,7 +23,6 @@ router.get('/', (req, res) => {
   const params = [];
   const countParams = [];
 
-  // Filter by role
   if (role && role !== 'all') {
     query += ' AND role = ?';
     countQuery += ' AND role = ?';
@@ -32,7 +30,6 @@ router.get('/', (req, res) => {
     countParams.push(role);
   }
 
-  // Search by name or email
   if (search) {
     query += ' AND (full_name LIKE ? OR email LIKE ?)';
     countQuery += ' AND (full_name LIKE ? OR email LIKE ?)';
@@ -43,7 +40,6 @@ router.get('/', (req, res) => {
   query += ' ORDER BY created_at DESC';
   query += ` LIMIT ${limitNum} OFFSET ${offset}`;
 
-  // Get total count
   db.query(countQuery, countParams, (err, countResult) => {
     if (err) {
       console.error('Error counting users:', err);
@@ -55,7 +51,6 @@ router.get('/', (req, res) => {
 
     const total = countResult[0].total;
 
-    // Get paginated data
     db.query(query, params, (err, results) => {
       if (err) {
         console.error('Error fetching users:', err);
@@ -77,7 +72,6 @@ router.get('/', (req, res) => {
   });
 });
 
-// GET users summary
 router.get('/summary', (req, res) => {
   const db = req.app.locals.db;
 
@@ -105,7 +99,6 @@ router.get('/summary', (req, res) => {
   });
 });
 
-// GET single user by ID
 router.get('/:id', (req, res) => {
   const db = req.app.locals.db;
   const userId = req.params.id;
@@ -139,12 +132,10 @@ router.get('/:id', (req, res) => {
   });
 });
 
-// POST create new user
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const { full_name, email, password, role, status } = req.body;
 
-  // Check if email already exists
   const checkQuery = `SELECT id FROM users WHERE email = ?`;
   db.query(checkQuery, [email], (err, results) => {
     if (err) {
@@ -162,7 +153,6 @@ router.post('/', (req, res) => {
       });
     }
 
-    // Hash password
     bcrypt.hash(password, 10, (err, hashedPassword) => {
       if (err) {
         console.error('Error hashing password:', err);
@@ -202,13 +192,11 @@ router.post('/', (req, res) => {
   });
 });
 
-// PUT update user
 router.put('/:id', (req, res) => {
   const db = req.app.locals.db;
   const userId = req.params.id;
   const { full_name, email, role, status } = req.body;
 
-  // Check if email already exists for another user
   const checkQuery = `SELECT id FROM users WHERE email = ? AND id != ?`;
   db.query(checkQuery, [email, userId], (err, results) => {
     if (err) {
@@ -249,13 +237,11 @@ router.put('/:id', (req, res) => {
   });
 });
 
-// PUT update user password
 router.put('/:id/password', (req, res) => {
   const db = req.app.locals.db;
   const userId = req.params.id;
   const { password } = req.body;
 
-  // Hash password
   bcrypt.hash(password, 10, (err, hashedPassword) => {
     if (err) {
       console.error('Error hashing password:', err);
@@ -284,7 +270,6 @@ router.put('/:id/password', (req, res) => {
   });
 });
 
-// DELETE user
 router.delete('/:id', (req, res) => {
   const db = req.app.locals.db;
   const userId = req.params.id;

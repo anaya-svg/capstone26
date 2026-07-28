@@ -2,7 +2,6 @@ import { exportToExcel } from './exportExcel'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-// Helper function to fetch image as base64
 const fetchImageAsBase64 = async (url) => {
   const response = await fetch(url)
   const blob = await response.blob()
@@ -14,7 +13,6 @@ const fetchImageAsBase64 = async (url) => {
   })
 }
 
-// Helpers
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   const date = new Date(dateString)
@@ -108,7 +106,6 @@ const buildExportUrl = (baseUrl, filterString) => {
   return baseUrl
 }
 
-// Excel/CSV export functions
 const exportFunctions = {
   assets: async (filterString) => {
     try {
@@ -315,12 +312,10 @@ const exportFunctions = {
   }
 }
 
-// Download functions registry
 export const downloadFunctions = {
   csv: exportFunctions,
   excel: exportFunctions,
 
-  // PDF Downloads
   pdf: {
     procurement: async (prId) => {
       try {
@@ -515,11 +510,9 @@ export const downloadFunctions = {
   }
 }
 
-// Main download handler function
 export const handleDownload = async (downloadString) => {
   console.log('handleDownload called with:', downloadString, 'type:', typeof downloadString)
 
-  // Validate input
   if (!downloadString) {
     console.error('Download string is empty or undefined')
     throw new Error('Invalid download link')
@@ -530,7 +523,6 @@ export const handleDownload = async (downloadString) => {
     throw new Error('Invalid download link format')
   }
 
-  // Parse download string: format is "download:type:module:filter"
   const parts = downloadString.split(':')
 
   if (parts.length < 3 || parts[0] !== 'download') {
@@ -538,7 +530,6 @@ export const handleDownload = async (downloadString) => {
     throw new Error('Invalid download link format')
   }
 
-  // Support both "excel" and "csv" as Excel export types
   const type = parts[1] === 'excel' ? 'csv' : parts[1]
   const module = parts[2]
   const filterString = parts[3] || null

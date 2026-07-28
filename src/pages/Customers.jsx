@@ -407,7 +407,7 @@ function Customers() {
 
   const formatPhoneForWhatsApp = (phoneNumber) => {
     if (!phoneNumber) return null
-    let formatted = phoneNumber.replace(/\D/g, '') // Remove all non-digit characters
+    let formatted = phoneNumber.replace(/\D/g, '')
     if (formatted.startsWith('0')) {
       formatted = '62' + formatted.substring(1)
     }
@@ -637,17 +637,14 @@ function Customers() {
   const recalculatePromoDiscount = (promo, subtotal, packageName, date) => {
     if (!promo) return { discount: 0, error: '' }
 
-    // 1. Check applicability
     if (promo.applicable_to !== 'all' && promo.applicable_to !== 'in_studio') {
       return { discount: 0, error: `This promo is only valid for Off-Site Events!` }
     }
 
-    // 2. Check min spending limit
     if (subtotal < Number(promo.min_transaction)) {
       return { discount: 0, error: `Minimum transaction amount of Rp ${new Intl.NumberFormat('id-ID').format(promo.min_transaction)} not reached` }
     }
 
-    // 3. Check dates
     const transactionDate = date ? new Date(date) : new Date()
     const startDate = new Date(promo.start_date)
     const endDate = new Date(promo.end_date)
@@ -659,7 +656,6 @@ function Customers() {
       return { discount: 0, error: 'This promo is not valid on this date!' }
     }
 
-    // 4. Weekday slump
     if (promo.eligibility_type === 'weekday_slump' && promo.day_restrictions) {
       const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
       const dayName = weekdays[transactionDate.getDay()]
@@ -668,7 +664,6 @@ function Customers() {
       }
     }
 
-    // 5. Package bundling
     if (promo.eligibility_type === 'package_bundling' && promo.target_package_name) {
       if (!packageName || packageName.toLowerCase() !== promo.target_package_name.toLowerCase()) {
         return { discount: 0, error: `Only valid for ${promo.target_package_name} package` }
@@ -899,7 +894,6 @@ function Customers() {
     e.preventDefault()
     if (!validateVisitForm()) return
     
-    // Check paper stock
     if (visitFormData.paper_type_item_id && visitFormData.paper_quantity > (visitFormData.paper_stock || 0)) {
       showSystemNotice('error', 'Quantity insufficient for the selected photo paper.')
       return
@@ -952,7 +946,7 @@ function Customers() {
       paper_type_name: visit.paper_type_name || 'Selected Paper',
       paper_quantity: visit.paper_quantity,
       with_photographer: !!visit.with_photographer,
-      paper_stock: 999, // Placeholder since we don't have realtime stock here without fetch
+      paper_stock: 999, 
       promo_id: visit.promo_id || null,
       promo_code: visit.promo_code || '',
       discount_amount: disc
@@ -965,7 +959,7 @@ function Customers() {
         promo_id: visit.promo_id,
         promo_code: visit.promo_code,
         promo_name: visit.promo_name,
-        discount_type: 'flat', // Placeholder for display
+        discount_type: 'flat',
         discount_value: disc
       })
     } else {
