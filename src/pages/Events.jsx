@@ -1628,7 +1628,7 @@ function Events() {
                 {/* Package & Revenue Section */}
                 <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-blue-800">Booth Package</h3>
+                    <h3 className="font-bold text-blue-800">Booth Package*</h3>
                     <button
                       type="button"
                       onClick={handleOpenSelectPackageModal}
