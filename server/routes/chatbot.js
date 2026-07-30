@@ -45,6 +45,27 @@ Examples:
 - [Download Excel Assets - Camera Gear & Computers (Good)](download:excel:assets:category=Camera%20Gear,Computers&condition=Good)
 - [Download Accounting Report - In Studio July 2025](download:excel:accounting:reportFocus=customer_in_studio&filterType=month&startDate=2025-07)
 
+CUSTOM COLUMN EXPORTS:
+When a user requests specific columns only (e.g., "only event name and customer", "Excel with just name and phone number"), use this format:
+[Link Text](download:excel:custom:module:columns:filter)
+
+- module: assets, inventory, events, customers, procurement
+- columns: comma-separated list of column names (snake_case)
+- filter: optional filters (same format as above)
+
+Available columns per module:
+- assets: asset_id, name, category, status, location, condition, quantity, created_at
+- inventory: item_id, item_name, category_name, stock_quantity, minimum_stock, uom_name, stock_status, last_update
+- events: event_id, event_name, start_date, end_date, location, customer, package_name, status, expected_revenue
+- customers: customer_id, name, phone_number, email, total_visits, total_spending, is_in_studio, is_off_site
+- procurement: pr_id, requested_by, status, total_cost, created_at, supplier, vendor
+
+Examples:
+- [Download Excel Events - Name & Customer Only](download:excel:custom:events:columns=event_name,customer:all)
+- [Download Excel Customers - Name & Phone Only](download:excel:custom:customers:columns=name,phone_number:all)
+- [Download Excel Assets - Name & Status Only](download:excel:custom:assets:columns=name,status:all)
+- [Download Excel Inventory - Item Name & Stock Only](download:excel:custom:inventory:columns=item_name,stock_quantity:all)
+
 CRITICAL: When generating the Excel/CSV download link, use download:excel: NOT download:csv:. Always use the exact query parameter names listed above and match the exact filter values. If the user specifies a filter, include it in the filter string.
 
 Guidelines:
@@ -669,6 +690,152 @@ router.post('/chat', async (req, res) => {
       success: false, 
       message: 'Internal server error',
       error: error.message 
+    });
+  }
+});
+
+// Custom export endpoint for flexible column selection
+router.post('/custom-export', async (req, res) => {
+  const db = req.app.locals.db;
+  const { module, columns, filters } = req.body;
+
+  if (!module || !columns || !Array.isArray(columns) || columns.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Module and columns array are required'
+    });
+  }
+
+  try {
+    let query = '';
+    let params = [];
+
+    // Column mapping for each module
+    const columnMap = {
+      assets: {
+        'asset_id': 'asset_id',
+        'name': 'name',
+        'category': 'category',
+        'status': 'status',
+        'location': 'location',
+        'condition': 'condition',
+        'quantity': 'quantity',
+        'created_at': 'created_at'
+      },
+      inventory: {
+        'item_id': 'item_id',
+        'item_name': 'item_name',
+        'category_name': 'category_name',
+        'stock_quantity': 'stock_quantity',
+        'minimum_stock': 'minimum_stock',
+        'uom_name': 'uom_name',
+        'stock_status': 'stock_status',
+        'last_update': 'last_update'
+      },
+      events: {
+        'event_id': 'event_id',
+        'event_name': 'event_name',
+        'start_date': 'start_date',
+        'end_date': 'end_date',
+        'location': 'location',
+        'customer': 'customer',
+        'package_name': 'package_name',
+        'status': 'status',
+        'expected_revenue': 'expected_revenue'
+      },
+      customers: {
+        'customer_id': 'customer_id',
+        'name': 'name',
+        'phone_number': 'phone_number',
+        'email': 'email',
+        'total_visits': 'total_visits',
+        'total_spending': 'total_spending',
+        'is_in_studio': 'is_in_studio',
+        'is_off_site': 'is_off_site'
+      },
+      procurement: {
+        'pr_id': 'pr_id',
+        'requested_by': 'requested_by',
+        'status': 'status',
+        'total_cost': 'total_cost',
+        'created_at': 'created_at',
+        'supplier': 'supplier',
+        'vendor': 'vendor'
+      }
+    };
+
+    const tableMap = {
+      assets: 'assets',
+      inventory: 'inventory',
+      events: 'events',
+      customers: 'customers',
+      procurement: 'procurement_requests'
+    };
+
+    const validColumns = columnMap[module];
+    const tableName = tableMap[module];
+
+    if (!validColumns || !tableName) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid module: ${module}`
+      });
+    }
+
+    // Validate requested columns
+    const validRequestedColumns = columns.filter(col => validColumns[col]);
+    if (validRequestedColumns.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid columns specified'
+      });
+    }
+
+    // Build query with selected columns
+    const selectedColumns = validRequestedColumns.map(col => validColumns[col]);
+    query = `SELECT ${selectedColumns.join(', ')} FROM ${tableName}`;
+
+    // Apply filters if provided
+    if (filters) {
+      if (filters.status) {
+        query += ' WHERE status = ?';
+        params.push(filters.status);
+      }
+      if (filters.customer_name) {
+        query += query.includes('WHERE') ? ' AND' : ' WHERE';
+        query += ' name LIKE ?';
+        params.push(`%${filters.customer_name}%`);
+      }
+      if (filters.startDate && filters.endDate) {
+        query += query.includes('WHERE') ? ' AND' : ' WHERE';
+        query += ' (DATE(start_date) <= ? AND DATE(end_date) >= ?)';
+        params.push(filters.endDate, filters.startDate);
+      }
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    db.query(query, params, (err, results) => {
+      if (err) {
+        console.error('Error in custom export:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Error fetching data for custom export'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: results,
+        columns: validRequestedColumns
+      });
+    });
+  } catch (error) {
+    console.error('Error in custom export endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
     });
   }
 });

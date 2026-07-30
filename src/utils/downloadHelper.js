@@ -309,6 +309,56 @@ const exportFunctions = {
       console.error('Error downloading accounting report:', error)
       throw new Error('Error downloading accounting report')
     }
+  },
+
+  custom: async (exportString) => {
+    try {
+      const parts = exportString.split(':')
+      const module = parts[0]
+      const columns = parts[1]?.split(',') || []
+      const filterString = parts[2] || 'all'
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/chatbot/custom-export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ module, columns, filters: {} })
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error('Error fetching custom export data')
+      }
+
+      // Convert snake_case columns to readable headers
+      const headers = columns.map(col => 
+        col.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+      )
+
+      const rows = data.data.map((row) => 
+        columns.map(col => {
+          const value = row[col]
+          if (col.includes('date') || col.includes('created_at') || col.includes('updated_at') || col.includes('last_update')) {
+            return formatDate(value)
+          }
+          if (col.includes('revenue') || col.includes('cost') || col.includes('spending')) {
+            return `Rp ${Number(value || 0).toLocaleString('id-ID')}`
+          }
+          if (col.includes('stock_status')) {
+            return getStockStatusLabel(value)
+          }
+          return value || 'N/A'
+        })
+      )
+
+      await exportToExcel(headers, rows, `Custom Export - ${module.charAt(0).toUpperCase() + module.slice(1)}`, `custom_${module}`, {
+        columnWidths: columns.map(() => 20),
+        filterSummary: buildFilterSummary(filterString)
+      })
+    } catch (error) {
+      console.error('Error downloading custom export:', error)
+      throw new Error('Error downloading custom export')
+    }
   }
 }
 
@@ -537,7 +587,20 @@ export const handleDownload = async (downloadString) => {
   console.log('Parsed download params:', { type, module, filterString })
 
   try {
-    if (downloadFunctions[type] && downloadFunctions[type][module]) {
+    // Handle custom export format: download:excel:custom:module:columns:filter
+    if (module === 'custom' && parts.length >= 5) {
+      const customModule = parts[3]
+      const customColumns = parts[4]
+      const customFilter = parts[5] || 'all'
+      const exportString = `${customModule}:${customColumns}:${customFilter}`
+      
+      if (downloadFunctions[type] && downloadFunctions[type].custom) {
+        await downloadFunctions[type].custom(exportString)
+      } else {
+        console.error('Custom export function not found:', type)
+        throw new Error('Custom export function not implemented')
+      }
+    } else if (downloadFunctions[type] && downloadFunctions[type][module]) {
       await downloadFunctions[type][module](filterString)
     } else {
       console.error('Download function not found:', type, module)
