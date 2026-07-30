@@ -999,7 +999,7 @@ function Assets() {
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
             >
               <Download size={16} />
-              Download CSV
+              Download Excel
             </button>
           </div>
           <div className="max-h-[500px] overflow-y-auto">
@@ -1819,7 +1819,7 @@ function Assets() {
             onMouseDown={(e) => handleBackdropClose(e, () => setShowCsvFilterModal(false))}
           >
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4">Download CSV Filter</h2>
+              <h2 className="text-xl font-bold mb-4">Download Excel Filter</h2>
 
               <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
                 <label className="flex items-center">
@@ -1941,7 +1941,7 @@ function Assets() {
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   <Download size={16} />
-                  Download CSV
+                  Download Excel
                 </button>
               </div>
             </div>

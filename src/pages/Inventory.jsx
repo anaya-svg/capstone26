@@ -1116,7 +1116,7 @@ function Inventory() {
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
               >
                 <Download size={16} />
-                Download CSV
+                Download Excel
               </button>
             </div>
           </div>
@@ -2281,8 +2281,8 @@ function Inventory() {
               stockStatuses: []
             })
           }
-          title="Download CSV Filter"
-          exportLabel="Download CSV"
+          title="Download Excel Filter"
+          exportLabel="Download Excel"
         >
           <div>
             <h3 className="text-sm font-semibold text-gray-700 mb-2">Stock Status</h3>
