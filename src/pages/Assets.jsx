@@ -247,7 +247,10 @@ function Assets() {
 
   const fetchSummary = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/summary`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/summary`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setSummary(data.data)
@@ -259,6 +262,7 @@ function Assets() {
 
   const fetchAssets = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       let url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets`
       const params = []
       if (statusFilter) params.push(`status=${encodeURIComponent(statusFilter)}`)
@@ -268,7 +272,9 @@ function Assets() {
       params.push(`limit=${itemsPerPage}`)
       if (params.length > 0) url += `?${params.join('&')}`
 
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setAssets(data.data)
@@ -466,8 +472,12 @@ function Assets() {
         formDataToSend.append('photo_attachment', formData.photo_attachment)
       }
 
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: formDataToSend
       })
 
@@ -501,8 +511,12 @@ function Assets() {
         formDataToSend.append('photo_attachment', formData.photo_attachment)
       }
 
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/${selectedAsset.asset_id}`, {
         method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: formDataToSend
       })
 

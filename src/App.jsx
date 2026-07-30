@@ -32,8 +32,6 @@ function SessionGuard() {
       return
     }
 
-    const token = user.session_token
-
     const verifySession = async () => {
       const currentData = sessionStorage.getItem('user')
       const currentUser = currentData ? JSON.parse(currentData) : null
@@ -66,6 +64,7 @@ function SessionGuard() {
 
     verifySession()
     intervalRef.current = setInterval(verifySession, 15000)
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
@@ -76,6 +75,7 @@ function SessionGuard() {
 
   return null
 }
+
 
 function App() {
   return (

@@ -115,10 +115,13 @@ function Calendar() {
 
   const fetchEvents = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const url = statusFilter === 'all'
         ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events/calendar`
         : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events/calendar?status=${statusFilter}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setEvents(data.data)
@@ -130,7 +133,10 @@ function Calendar() {
 
   const fetchActivities = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/calendar`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/calendar`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setActivities(data.data)

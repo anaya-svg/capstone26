@@ -1,3 +1,4 @@
+// Touch file for nodemon restart
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -303,6 +304,10 @@ const createEventsTable = () => {
       booth_setup TEXT,
       expected_revenue DECIMAL(15, 2),
       status ENUM('upcoming', 'in_progress', 'completed', 'cancelled') DEFAULT 'upcoming',
+      is_deleted BOOLEAN DEFAULT FALSE,
+      deleted_reason TEXT,
+      deleted_by VARCHAR(255),
+      deleted_at TIMESTAMP NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL
@@ -339,7 +344,7 @@ const createEventsTable = () => {
       });
 
       const addCreatedByQuery = `
-        ALTER TABLE events 
+        ALTER TABLE events
         ADD COLUMN created_by VARCHAR(255) NULL
       `;
       db.query(addCreatedByQuery, (err) => {
@@ -347,6 +352,21 @@ const createEventsTable = () => {
           console.error('Error adding created_by column to events table:', err);
         } else {
           console.log('Created_by column ready in events table');
+        }
+      });
+
+      const addDeletedColumnsQuery = `
+        ALTER TABLE events
+        ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS deleted_reason TEXT,
+        ADD COLUMN IF NOT EXISTS deleted_by VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL
+      `;
+      db.query(addDeletedColumnsQuery, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') {
+          console.error('Error adding delete columns to events table:', err);
+        } else {
+          console.log('Delete columns ready in events table');
         }
       });
     }

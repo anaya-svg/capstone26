@@ -462,10 +462,13 @@ function Customers() {
 
   const fetchSummary = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const url = activeSegment === 'all'
         ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/summary`
         : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/summary?segment=${activeSegment}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setSummary(data.data)
@@ -477,6 +480,7 @@ function Customers() {
 
   const fetchCustomers = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       let url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers`
       const params = []
       
@@ -495,7 +499,9 @@ function Customers() {
         url += `?${params.join('&')}`
       }
       
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setCustomers(data.data)
@@ -823,10 +829,12 @@ function Customers() {
     e.preventDefault()
     if (!validateForm()) return
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
         },
         body: JSON.stringify(formData)
       })
@@ -849,10 +857,12 @@ function Customers() {
     e.preventDefault()
     if (!validateForm()) return
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/${selectedCustomer.customer_id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
         },
         body: JSON.stringify(formData)
       })

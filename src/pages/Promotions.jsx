@@ -97,7 +97,6 @@ export default function Promotions({ isOpen, onClose }) {
     if (!isOpen) return
     const user = JSON.parse(sessionStorage.getItem('user'))
     if (!user) {
-      navigate('/login')
       return
     }
     fetchPromotions()
@@ -120,7 +119,10 @@ export default function Promotions({ isOpen, onClose }) {
 
   const fetchPromotions = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/promotions`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/promotions`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setPromotions(data.data)
@@ -311,6 +313,8 @@ export default function Promotions({ isOpen, onClose }) {
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = filteredPromotions.slice(indexOfFirstItem, indexOfLastItem)
+  const totalItems = filteredPromotions.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber)

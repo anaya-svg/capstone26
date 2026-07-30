@@ -38,7 +38,10 @@ function Events() {
 
   const fetchAssets = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/active`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/active`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setAssets(data.data)
@@ -147,6 +150,7 @@ function Events() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showHardDeleteModal, setShowHardDeleteModal] = useState(false)
   const [showMissingDataModal, setShowMissingDataModal] = useState(false)
+  const [deleteReason, setDeleteReason] = useState('')
 
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [selectedEventForDelete, setSelectedEventForDelete] = useState(null)
@@ -307,7 +311,10 @@ function Events() {
 
   const fetchSummary = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events/summary`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events/summary`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setSummary(data.data)
@@ -319,6 +326,7 @@ function Events() {
 
   const fetchEvents = async (status = '', date = '', search = '') => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       let url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events`
       const params = []
       if (status) params.push(`status=${status}`)
@@ -327,7 +335,9 @@ function Events() {
       params.push(`page=${currentPage}`)
       params.push(`limit=${itemsPerPage}`)
       if (params.length > 0) url += `?${params.join('&')}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setEvents(data.data)
@@ -897,6 +907,7 @@ function Events() {
     const event = events.find(e => e.event_id === eventId)
     if (!event) return
     setSelectedEventForDelete(event)
+    setDeleteReason('')
     setShowDeleteModal(true)
   }
 
@@ -910,17 +921,34 @@ function Events() {
   const confirmDelete = async () => {
     if (!selectedEventForDelete) return
 
+    if (selectedEventForDelete.status === 'completed' && !deleteReason.trim()) {
+      showSystemNotice('error', 'Please provide a reason for deleting this completed event')
+      return
+    }
+
+    const user = JSON.parse(sessionStorage.getItem('user'))
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events/${selectedEventForDelete.event_id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
+        },
+        body: JSON.stringify({ 
+          delete_reason: deleteReason,
+          is_completed: selectedEventForDelete.status === 'completed',
+          deleted_by: userName
+        })
       })
       const data = await response.json()
       if (data.success) {
         setShowDeleteModal(false)
         setSelectedEventForDelete(null)
+        setDeleteReason('')
         fetchSummary()
         fetchEvents(statusFilter, dateFilter, searchTerm)
-        showSystemNotice('success', 'Event cancelled successfully')
+        showSystemNotice('success', selectedEventForDelete.status === 'completed' ? 'Event deleted successfully' : 'Event cancelled successfully')
       }
     } catch (error) {
       console.error('Error deleting event:', error)
@@ -1069,9 +1097,13 @@ function Events() {
         : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events`
       const method = isEditModalOpen ? 'PUT' : 'POST'
 
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: JSON.stringify(payload)
       })
 
@@ -1359,9 +1391,21 @@ function Events() {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{event.location}</td>
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{event.customer}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(event.status)}`}>
-                        {event.status === 'in_progress' ? 'In Progress' : event.status === 'upcoming' ? 'Upcoming' : event.status === 'completed' ? 'Completed' : event.status === 'cancelled' ? 'Cancelled' : event.status}
+                    <td className="px-4 py-3 text-left">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          event.is_deleted ? 'bg-gray-500 text-white' : getStatusColor(event.status)
+                        }`}
+                      >
+                        {event.is_deleted
+                          ? 'Deleted'
+                          : event.status === 'in_progress'
+                          ? 'In Progress'
+                          : event.status === 'upcoming'
+                          ? 'Upcoming'
+                          : event.status === 'completed'
+                          ? 'Completed'
+                          : 'Cancelled'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-bold">
@@ -1385,11 +1429,11 @@ function Events() {
                             >
                               <Pencil size={16} />
                             </button>
-                            {event.status === 'upcoming' || event.status === 'in_progress' ? (
+                            {event.status === 'upcoming' || event.status === 'in_progress' || event.status === 'completed' ? (
                               <button
                                 onClick={() => handleDelete(event.event_id)}
                                 className="p-2 bg-red-600 text-white rounded hover:bg-red-700"
-                                title="Delete"
+                                title={event.status === 'completed' ? 'Delete' : 'Delete'}
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -2401,6 +2445,12 @@ function Events() {
                   Created By: {selectedEvent.created_by || 'N/A'}
                 </span>
               </div>
+              {selectedEvent.is_deleted ? (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+                  <p className="text-sm font-medium text-red-800">Delete Reason:</p>
+                  <p className="text-sm text-red-700">{selectedEvent.deleted_reason || '-'}</p>
+                </div>
+              ) : null}
               <div className="space-y-6 pt-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -2509,11 +2559,34 @@ function Events() {
           onMouseDown={(e) => handleBackdropClose(e, () => setShowDeleteModal(false))}
         >
           <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-sm">
-            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Cancel Event</h2>
-            <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to cancel this event?</p>
+            <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">
+              {selectedEventForDelete.status === 'completed' ? 'Delete Completed Event' : 'Cancel Event'}
+            </h2>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+              {selectedEventForDelete.status === 'completed' 
+                ? 'Are you sure you want to delete this completed event? This will remove it from revenue calculations.' 
+                : 'Are you sure you want to cancel this event?'}
+            </p>
+            {selectedEventForDelete.status === 'completed' && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Reason for deletion *
+                </label>
+                <textarea
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                  rows="3"
+                  placeholder="Please explain why this event needs to be deleted..."
+                />
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowDeleteModal(false)}
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDeleteReason('')
+                }}
                 className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600"
               >
                 Cancel
@@ -2522,7 +2595,7 @@ function Events() {
                 onClick={confirmDelete}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
-                Yes
+                {selectedEventForDelete.status === 'completed' ? 'Delete' : 'Yes'}
               </button>
             </div>
           </div>

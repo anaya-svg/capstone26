@@ -98,6 +98,10 @@ function UserManagement() {
       navigate('/login')
       return
     }
+    if (user.role !== 'admin') {
+      navigate('/dashboard')
+      return
+    }
     setUserName(user.full_name)
     setUserRole(user.role)
     fetchSummary()
@@ -119,33 +123,54 @@ function UserManagement() {
 
   const fetchSummary = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/users/summary`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      if (!user?.session_token) return
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/users/summary`, {
+        headers: {
+          'Authorization': `Bearer ${user.session_token}`
+        }
+      })
       const data = await response.json()
       if (data.success) {
         setSummary(data.data)
+      } else {
+        showSystemNotice('error', data.message || 'Gagal memuat ringkasan user')
       }
     } catch (error) {
       console.error('Error fetching users summary:', error)
+      showSystemNotice('error', 'Gagal memuat ringkasan user')
     }
   }
 
   const fetchUsers = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      if (!user?.session_token) {
+        showSystemNotice('error', 'Sesi tidak valid, silakan login ulang')
+        return
+      }
       const params = new URLSearchParams()
       if (searchTerm) params.append('search', searchTerm)
       if (roleFilter !== 'all') params.append('role', roleFilter)
       params.append('page', currentPage)
       params.append('limit', itemsPerPage)
-      
+
       const url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/users?${params.toString()}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${user.session_token}`
+        }
+      })
       const data = await response.json()
       if (data.success) {
         setUsers(data.data)
         setTotalUsers(data.total || 0)
+      } else {
+        showSystemNotice('error', data.message || 'Gagal memuat daftar user')
       }
     } catch (error) {
       console.error('Error fetching users:', error)
+      showSystemNotice('error', 'Gagal memuat daftar user')
     }
   }
 
@@ -175,6 +200,7 @@ function UserManagement() {
     e.preventDefault()
     if (!validateForm()) return
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const updateData = {
         full_name: formData.full_name,
         email: formData.email,
@@ -185,7 +211,8 @@ function UserManagement() {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/users/${selectedUser.id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
         },
         body: JSON.stringify(updateData)
       })
@@ -205,8 +232,12 @@ function UserManagement() {
 
   const confirmDelete = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/users/${selectedUser.id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user?.session_token}`
+        }
       })
 
       const data = await response.json()

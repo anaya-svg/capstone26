@@ -366,6 +366,8 @@ router.post('/', upload.single('photo_attachment'), (req, res) => {
   const { name, category, status, location, condition, quantity, has_barcode } = req.body;
   const photo_attachment = req.file ? `/asset_attachment/${req.file.filename}` : null;
 
+  const checkQuery = `SELECT * FROM assets WHERE name = ?`;
+
   db.query(checkQuery, [name], (err, results) => {
     if (err) {
       console.error('Error checking asset name:', err);
@@ -421,6 +423,8 @@ router.put('/:asset_id', upload.single('photo_attachment'), (req, res) => {
   const { asset_id } = req.params;
   const { name, category, status, location, condition, quantity, has_barcode } = req.body;
   const photo_attachment = req.file ? `/asset_attachment/${req.file.filename}` : null;
+
+  const checkQuery = `SELECT * FROM assets WHERE name = ? AND asset_id != ?`;
 
   db.query(checkQuery, [name, asset_id], (err, results) => {
     if (err) {

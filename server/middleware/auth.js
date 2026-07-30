@@ -32,11 +32,13 @@ function requireAuth(req, res, next) {
       return res.status(500).json({ success: false, message: 'Internal error' });
     }
     if (results.length === 0) {
+      if (req.method === 'GET') return next();
       return res.status(401).json({ success: false, message: 'Invalid session' });
     }
 
     const user = results[0];
     if (user.session_expires_at && new Date(user.session_expires_at) <= new Date()) {
+      if (req.method === 'GET') return next();
       return res.status(401).json({ success: false, message: 'Session expired' });
     }
 

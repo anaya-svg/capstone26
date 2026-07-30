@@ -406,7 +406,10 @@ function Inventory() {
 
   const fetchUoms = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/uom`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/uom`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setUoms(data.data)
@@ -418,7 +421,10 @@ function Inventory() {
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setVendors(data.data)
@@ -430,7 +436,10 @@ function Inventory() {
 
   const fetchSummary = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory/summary`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory/summary`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setSummary(data.data)
@@ -442,6 +451,7 @@ function Inventory() {
 
   const fetchInventory = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const params = new URLSearchParams()
       if (searchTerm) params.append('search', searchTerm)
       if (statusFilter) params.append('status', statusFilter)
@@ -450,7 +460,9 @@ function Inventory() {
       params.append('limit', itemsPerPage)
       
       const url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory?${params.toString()}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setInventory(data.data)
@@ -463,10 +475,13 @@ function Inventory() {
 
   const fetchLowStockItems = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const params = new URLSearchParams()
       params.append('status', 'active')
       const url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory/low-stock?${params.toString()}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setLowStockItems(data.data)
@@ -853,8 +868,12 @@ function Inventory() {
         formDataObj.append('attachment', formData.attachment)
       }
 
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: formDataObj
       })
 
@@ -894,8 +913,12 @@ function Inventory() {
         formDataObj.append('attachment', formData.attachment)
       }
 
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory/${selectedItem.item_id}`, {
         method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: formDataObj
       })
 

@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-const SESSION_DURATION_SECONDS = 1800;
+const SESSION_DURATION_SECONDS = 300;
 
 const generateSessionToken = () => crypto.randomBytes(32).toString('hex');
 const getSessionExpiry = () => {
@@ -374,6 +374,8 @@ router.post('/logout', (req, res) => {
   const { session_token } = req.body;
   const db = req.app.locals.db;
 
+  console.log('Logout request received for session token:', session_token);
+
   if (!session_token) {
     return res.status(400).json({
       success: false,
@@ -382,7 +384,7 @@ router.post('/logout', (req, res) => {
   }
 
   const query = `UPDATE users SET session_token = NULL, session_expires_at = NULL WHERE session_token = ?`;
-  db.query(query, [session_token], (err) => {
+  db.query(query, [session_token], (err, result) => {
     if (err) {
       console.error('Error logging out:', err);
       return res.status(500).json({
@@ -390,6 +392,8 @@ router.post('/logout', (req, res) => {
         message: 'Error logging out'
       });
     }
+
+    console.log('Logout successful, affected rows:', result.affectedRows);
 
     res.json({
       success: true,

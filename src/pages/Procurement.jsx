@@ -49,7 +49,10 @@ function Procurement() {
 
   const fetchInventory = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory?status=active`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory?status=active`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setInventory(data.data)
@@ -61,7 +64,10 @@ function Procurement() {
 
   const fetchAssets = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/active`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/active`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setAssets(data.data)
@@ -73,7 +79,10 @@ function Procurement() {
 
   const fetchVendors = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setVendors(data.data)
@@ -112,9 +121,13 @@ function Procurement() {
       return
     }
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: JSON.stringify(newVendorFormData)
       })
       const data = await response.json()
@@ -144,8 +157,10 @@ function Procurement() {
       'Are you sure you want to delete this vendor?',
       async () => {
         try {
+          const user = JSON.parse(sessionStorage.getItem('user'))
           const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors/${vendorId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${user?.session_token}` }
           })
           const data = await response.json()
           if (data.success) {
@@ -170,9 +185,13 @@ function Procurement() {
 
   const handleUpdateVendor = async (vendor) => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors/${vendor.vendor_id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: JSON.stringify({
           vendor_name: vendor.vendor_name,
           contact_person: vendor.contact_person,
@@ -420,7 +439,10 @@ function Procurement() {
 
   const fetchSummary = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/summary`)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/summary`, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setSummary(data.data)
@@ -432,6 +454,7 @@ function Procurement() {
 
   const fetchProcurementRequests = async (status = '', date = '', search = '') => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       let url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement`
       const params = []
       if (status) params.push(`status=${status}`)
@@ -440,7 +463,9 @@ function Procurement() {
       params.push(`page=${currentPage}`)
       params.push(`limit=${itemsPerPage}`)
       if (params.length > 0) url += `?${params.join('&')}`
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
+      })
       const data = await response.json()
       if (data.success) {
         setProcurementRequests(data.data)
@@ -687,8 +712,12 @@ function Procurement() {
     }
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/${selectedRequest.pr_id}`, {
         method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: formDataObj
       })
       const data = await response.json()
@@ -1013,8 +1042,10 @@ function Procurement() {
         }
       }
 
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(url, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
       const data = await response.json()
       if (data.success) {
@@ -1032,8 +1063,10 @@ function Procurement() {
   const confirmDelete = async () => {
     if (!selectedRequestForDelete) return
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/${selectedRequestForDelete.pr_id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
       const data = await response.json()
       if (data.success) {
@@ -1114,8 +1147,12 @@ function Procurement() {
     }
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: formDataObj
       })
       const data = await response.json()
@@ -1152,9 +1189,13 @@ function Procurement() {
     console.log('Payload:', payload)
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
+        },
         body: JSON.stringify(payload)
       })
       const data = await response.json()

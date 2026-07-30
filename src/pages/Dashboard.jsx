@@ -88,9 +88,12 @@ function Dashboard() {
   }, [showAutoDraftModal, showAccountingModal])
 
   const fetchDashboardData = async () => {
+    const user = JSON.parse(sessionStorage.getItem('user'))
+    const authHeaders = user?.session_token ? { 'Authorization': `Bearer ${user.session_token}` } : {}
+
     const safeFetch = async (url) => {
       try {
-        const res = await fetch(url)
+        const res = await fetch(url, { headers: authHeaders })
         if (!res.ok) {
           console.warn(`Fetch to ${url} failed with status: ${res.status}`)
           return null
@@ -298,7 +301,12 @@ function Dashboard() {
         url += `?${params.join('&')}`
       }
 
-      const response = await fetch(url)
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${user?.session_token}`
+        }
+      })
       const data = await response.json()
 
       if (!data.success) {

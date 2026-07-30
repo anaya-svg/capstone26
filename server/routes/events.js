@@ -1202,32 +1202,94 @@ router.put('/:event_id', (req, res) => {
 router.delete('/:event_id', (req, res) => {
   const db = req.app.locals.db;
   const { event_id } = req.params;
+  const { delete_reason, is_completed } = req.body;
+
+  console.log('DELETE event request:', { event_id, delete_reason, is_completed });
 
   db.query('SELECT * FROM events WHERE event_id = ?', [event_id], (err, results) => {
-    if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Event not found' });
+    if (err) {
+      console.error('Error fetching event:', err);
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+    if (results.length === 0) {
+      console.error('Event not found:', event_id);
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
     const event = results[0];
+    console.log('Event found:', event);
 
-    db.beginTransaction(err => {
-      if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
-
-      if (event.backdrop_item_id && event.backdrop_item_id !== -1 && event.backdrop_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [event.backdrop_quantity, event.backdrop_item_id]);
-      }
-      if (event.print_item_id && event.print_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [event.print_quantity, event.print_item_id]);
+    db.getConnection((err, connection) => {
+      if (err) {
+        console.error('Connection error:', err);
+        return res.status(500).json({ success: false, message: 'Connection error' });
       }
 
-      if (event.customer_id && event.status !== 'cancelled' && event.expected_revenue) {
-        db.query('UPDATE customers SET total_spending = total_spending - ? WHERE customer_id = ?', [event.expected_revenue, event.customer_id]);
-      }
+      connection.beginTransaction(err => {
+        if (err) {
+          console.error('Transaction error:', err);
+          connection.release();
+          return res.status(500).json({ success: false, message: 'Transaction error' });
+        }
 
-      db.query("UPDATE events SET status = 'cancelled' WHERE event_id = ?", [event_id], (err) => {
-        if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Cancel error' }));
-        updateAssetStatusByEventStatus(event_id, 'cancelled', db);
-        db.commit(err => {
-          if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
-          res.json({ success: true, message: 'Event cancelled successfully' });
-        });
+        if (event.backdrop_item_id && event.backdrop_item_id !== -1 && event.backdrop_quantity > 0) {
+          connection.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [event.backdrop_quantity, event.backdrop_item_id]);
+        }
+        if (event.print_item_id && event.print_quantity > 0) {
+          connection.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [event.print_quantity, event.print_item_id]);
+        }
+
+        if (event.customer_id && event.status !== 'cancelled' && event.expected_revenue) {
+          connection.query('UPDATE customers SET total_spending = total_spending - ? WHERE customer_id = ?', [event.expected_revenue, event.customer_id]);
+        }
+
+        if (is_completed) {
+          const updateQuery = `
+            UPDATE events
+            SET status = 'cancelled',
+                is_deleted = TRUE,
+                deleted_reason = ?,
+                deleted_by = ?,
+                deleted_at = CURRENT_TIMESTAMP
+            WHERE event_id = ?
+          `;
+          connection.query(updateQuery, [delete_reason, req.body.deleted_by || 'Unknown', event_id], (err) => {
+            if (err) {
+              console.error('Delete error:', err);
+              connection.rollback(() => connection.release());
+              return res.status(500).json({ success: false, message: 'Delete error' });
+            }
+            updateAssetStatusByEventStatus(event_id, 'cancelled', connection);
+            connection.commit(err => {
+              if (err) {
+                console.error('Commit error:', err);
+                connection.rollback(() => connection.release());
+                return res.status(500).json({ success: false, message: 'Commit error' });
+              }
+              connection.release();
+              console.log('Event deleted successfully');
+              res.json({ success: true, message: 'Event deleted successfully' });
+            });
+          });
+        } else {
+          connection.query("UPDATE events SET status = 'cancelled' WHERE event_id = ?", [event_id], (err) => {
+            if (err) {
+              console.error('Cancel error:', err);
+              connection.rollback(() => connection.release());
+              return res.status(500).json({ success: false, message: 'Cancel error' });
+            }
+            updateAssetStatusByEventStatus(event_id, 'cancelled', connection);
+            connection.commit(err => {
+              if (err) {
+                console.error('Commit error:', err);
+                connection.rollback(() => connection.release());
+                return res.status(500).json({ success: false, message: 'Commit error' });
+              }
+              connection.release();
+              console.log('Event cancelled successfully');
+              res.json({ success: true, message: 'Event cancelled successfully' });
+            });
+          });
+        }
       });
     });
   });
