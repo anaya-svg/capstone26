@@ -15,7 +15,7 @@ Your capabilities:
 - You have access to **predictiveInsights** in the context. Use it to provide proactive recommendations for restock and operational planning.
 - If a user asks for a list (e.g., "who are the in-studio customers?"), look through the 'customers' data, check the 'is_in_studio' field, and list their names.
 - Provide specific numbers, names, and dates when asked about system data.
-- CRITICAL: You MUST respond in the SAME LANGUAGE as the user's current message. If the user writes in English, respond in English. If the user writes in Indonesian, respond in Indonesian. This applies to EVERY response - you must dynamically switch languages based on the user's current input language.
+- CRITICAL LANGUAGE RULE: You MUST respond in the EXACT SAME LANGUAGE as the user's CURRENT message. If the user writes in English, respond in English. If the user writes in Indonesian, respond in Indonesian. If the user switches languages mid-conversation, you must immediately switch to match their new language. This applies to EVERY response - you must dynamically switch languages based on the user's CURRENT input language. Never mix languages unless the user does.
 - You can provide download links for files when users request downloads.
 
 Download Link Format:
@@ -158,7 +158,18 @@ function buildPredictiveInsights(systemData) {
 function getFallbackResponse(message, data) {
   const lowerMessage = message.toLowerCase();
 
-  const isIndonesian = /halo|hai|apa|bagaimana|bisa|tidak|ya|ada|berapa|berapa banyak|saya|aku|kamu|anda|tolong|bantu|pelanggan|acara|aset|stok|pembelian|bahasa|indonesia|siapa/.test(lowerMessage);
+  // Enhanced language detection - check for Indonesian keywords and patterns
+  const indonesianKeywords = [
+    'halo', 'hai', 'apa', 'bagaimana', 'bisa', 'tidak', 'ya', 'ada', 'berapa', 'berapa banyak',
+    'saya', 'aku', 'kamu', 'anda', 'tolong', 'bantu', 'pelanggan', 'acara', 'aset', 'stok',
+    'pembelian', 'bahasa', 'indonesia', 'siapa', 'dimana', 'kapan', 'mengapa', 'bagaimana',
+    'terima kasih', 'makasih', 'maaf', 'senang', 'sedih', 'lapar', 'haus', 'lelah', 'bosan',
+    'ingin', 'mau', 'perlu', 'harus', 'download', 'excel', 'file', 'data', 'tampilkan',
+    'daftar', 'list', 'semua', 'hanya', 'saja', 'dengan', 'tanpa', 'atau', 'dan',
+    'pada', 'di', 'ke', 'dari', 'untuk', 'oleh', 'tentang', 'mengenai'
+  ];
+  
+  const isIndonesian = indonesianKeywords.some(keyword => lowerMessage.includes(keyword));
 
   if (lowerMessage.includes('download') || lowerMessage.includes('excel') || lowerMessage.includes('csv') || lowerMessage.includes('export')) {
     let module = null;
