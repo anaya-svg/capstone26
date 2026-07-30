@@ -960,8 +960,10 @@ function Events() {
     if (!selectedEventForDelete) return
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events/${selectedEventForDelete.event_id}/hard-delete`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
       const data = await response.json()
       if (data.success) {
@@ -1010,9 +1012,10 @@ function Events() {
     if (assetIds.length === 0) return false
     
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events/check-asset-conflicts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.session_token}` },
         body: JSON.stringify({
           start_date: formData.start_date,
           end_date: formData.end_date,
@@ -1136,10 +1139,12 @@ function Events() {
     }
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/events/${selectedEvent.event_id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
         },
         body: JSON.stringify({
           ...formData,

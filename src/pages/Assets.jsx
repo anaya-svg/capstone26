@@ -536,8 +536,10 @@ function Assets() {
 
   const confirmDraft = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/${selectedAsset.asset_id}/draft`, {
-        method: 'PUT'
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
 
       const data = await response.json()

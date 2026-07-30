@@ -315,10 +315,12 @@ function Inventory() {
     setAutoDraftLoadingItemId(selectedAutoDraftItem.item_id)
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/auto-draft-from-inventory/${selectedAutoDraftItem.item_id}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.session_token}`
         },
         body: JSON.stringify({
           requested_by: userName || 'System Auto Draft',
@@ -574,8 +576,10 @@ function Inventory() {
   const confirmDraft = async () => {
     if (!selectedItem) return
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory/${selectedItem.item_id}/draft`, {
-        method: 'PUT'
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
       const data = await response.json()
       if (data.success) {
@@ -596,8 +600,10 @@ function Inventory() {
   const confirmUndraft = async () => {
     if (!selectedItem) return
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory/${selectedItem.item_id}/undraft`, {
-        method: 'PUT'
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
       const data = await response.json()
       if (data.success) {
@@ -621,9 +627,10 @@ function Inventory() {
       return
     }
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/uom`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.session_token}` },
         body: JSON.stringify({ uom_name: newUOMName })
       })
       const data = await response.json()
@@ -647,9 +654,10 @@ function Inventory() {
       return
     }
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.session_token}` },
         body: JSON.stringify(newVendorFormData)
       })
       const data = await response.json()
@@ -679,8 +687,10 @@ function Inventory() {
       'Are you sure you want to delete this vendor?',
       async () => {
         try {
+          const user = JSON.parse(sessionStorage.getItem('user'))
           const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors/${vendorId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${user?.session_token}` }
           })
           const data = await response.json()
           if (data.success) {
@@ -705,9 +715,10 @@ function Inventory() {
 
   const handleUpdateVendor = async (vendor) => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/vendors/${vendor.vendor_id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.session_token}` },
         body: JSON.stringify({
           vendor_name: vendor.vendor_name,
           contact_person: vendor.contact_person,
@@ -762,8 +773,10 @@ function Inventory() {
       'Are you sure you want to delete this UOM?',
       async () => {
         try {
+          const user = JSON.parse(sessionStorage.getItem('user'))
           const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/uom/${uomId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${user?.session_token}` }
           })
           const data = await response.json()
           if (data.success) {
@@ -782,9 +795,10 @@ function Inventory() {
 
   const handleUpdateUom = async (uom) => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/uom/${uom.uom_id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.session_token}` },
         body: JSON.stringify({ uom_name: uom.uom_name })
       })
       const data = await response.json()
@@ -939,8 +953,10 @@ function Inventory() {
 
   const confirmDelete = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory/${selectedItem.item_id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
 
       const data = await response.json()

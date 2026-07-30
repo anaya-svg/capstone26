@@ -207,9 +207,10 @@ export default function Promotions({ isOpen, onClose }) {
     }
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/promotions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.session_token}` },
         body: JSON.stringify(submissionData)
       })
       const data = await response.json()
@@ -257,9 +258,10 @@ export default function Promotions({ isOpen, onClose }) {
     }
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/promotions/${selectedPromotion.promo_id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.session_token}` },
         body: JSON.stringify(submissionData)
       })
       const data = await response.json()
@@ -283,8 +285,10 @@ export default function Promotions({ isOpen, onClose }) {
 
   const handleDeleteSubmit = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/promotions/${selectedPromotion.promo_id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
       const data = await response.json()
       if (data.success) {

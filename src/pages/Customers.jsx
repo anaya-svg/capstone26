@@ -882,8 +882,10 @@ function Customers() {
 
   const confirmDelete = async () => {
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/${selectedCustomer.customer_id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
 
       const data = await response.json()
@@ -1035,8 +1037,10 @@ function Customers() {
       return
     }
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/${selectedAssignCustomer.customer_id}/assign-in-studio`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
       const data = await response.json()
       if (data.success) {

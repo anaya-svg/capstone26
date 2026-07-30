@@ -20,6 +20,19 @@ function SessionGuard() {
   const navigate = useNavigate()
   const location = useLocation()
   const intervalRef = useRef(null)
+  const inactivityTimeoutRef = useRef(null)
+  const lastActivityRef = useRef(Date.now())
+
+  const resetInactivityTimer = () => {
+    lastActivityRef.current = Date.now()
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current)
+    }
+    inactivityTimeoutRef.current = setTimeout(() => {
+      sessionStorage.removeItem('user')
+      window.location.reload()
+    }, 30 * 60 * 1000) // 30 minutes
+  }
 
   useEffect(() => {
     const userData = sessionStorage.getItem('user')
@@ -31,6 +44,13 @@ function SessionGuard() {
       }
       return
     }
+
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer)
+    })
+
+    resetInactivityTimer()
 
     const verifySession = async () => {
       const currentData = sessionStorage.getItem('user')
@@ -55,6 +75,9 @@ function SessionGuard() {
             clearInterval(intervalRef.current)
             intervalRef.current = null
           }
+          if (inactivityTimeoutRef.current) {
+            clearTimeout(inactivityTimeoutRef.current)
+          }
           navigate('/login', { replace: true })
         }
       } catch (err) {
@@ -70,6 +93,12 @@ function SessionGuard() {
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current)
+      }
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetInactivityTimer)
+      })
     }
   }, [location, navigate])
 
