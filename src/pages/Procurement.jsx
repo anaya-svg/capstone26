@@ -962,7 +962,7 @@ function Procurement() {
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/${pr_id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.session_token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
       const data = await response.json()
