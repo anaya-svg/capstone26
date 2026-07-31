@@ -212,6 +212,8 @@ router.get('/:customer_id/visits', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
 
+  console.log('Fetching visits for customer:', customer_id);
+
   const query = 'SELECT cv.*, p.promo_code, p.promo_name FROM customer_visits cv LEFT JOIN promotions p ON cv.promo_id = p.promo_id WHERE cv.customer_id = ? ORDER BY cv.visit_date DESC';
 
   db.query(query, [customer_id], (err, results) => {
@@ -219,7 +221,7 @@ router.get('/:customer_id/visits', (req, res) => {
       console.error('Error fetching customer visits:', err);
       return res.status(500).json({
         success: false,
-        message: 'Error fetching customer visits'
+        message: 'Error fetching customer visits: ' + err.message
       });
     }
 
@@ -385,50 +387,95 @@ router.post('/:customer_id/visits', (req, res) => {
     paper_type_item_id, 
     paper_quantity, 
     with_photographer,
-    promo_id,
-    discount_amount
+    promo_id
   } = req.body;
 
-  let subtotal = 0;
-  if (package_name === 'Snap Photobox') {
-    subtotal = 20000;
-    if (person_quantity > 1) subtotal += (person_quantity - 1) * 20000;
-    if (duration > 7) subtotal += ((duration - 7) / 7) * 10000;
-    if (paper_quantity > 1) subtotal += (paper_quantity - 1) * 5000;
-  } else if (package_name === 'Snap Self Photo') {
-    subtotal = 60000;
-    if (person_quantity > 2) subtotal += (person_quantity - 2) * 20000;
-    if (duration > 15) subtotal += ((duration - 15) / 15) * 12000;
-    if (paper_quantity > 2) subtotal += (paper_quantity - 2) * 5000;
-  } else if (package_name === 'Snap Pas Photo') {
-    subtotal = 35000;
-    if (duration > 7) subtotal += ((duration - 7) / 7) * 12000;
-    if (paper_quantity > 1) subtotal += (paper_quantity - 1) * 5000;
-    if (with_photographer) subtotal += 50000;
+  console.log('Creating visit for customer:', customer_id, 'with data:', req.body);
+
+  if (!visit_date || !package_name) {
+    return res.status(400).json({
+      success: false,
+      message: 'Visit date and package name are required'
+    });
   }
 
-  const promoDiscount = Number(discount_amount) || 0;
-  const spending = Math.max(0, subtotal - promoDiscount);
+  let spending = 0;
+  if (package_name === 'Snap Photobox') {
+    spending = 20000;
+    if (person_quantity > 1) spending += (person_quantity - 1) * 20000;
+    if (duration > 7) spending += ((duration - 7) / 7) * 10000;
+    if (paper_quantity > 1) spending += (paper_quantity - 1) * 5000;
+  } else if (package_name === 'Snap Photobox Premium') {
+    spending = 35000;
+    if (person_quantity > 1) spending += (person_quantity - 1) * 25000;
+    if (duration > 7) spending += ((duration - 7) / 7) * 15000;
+    if (paper_quantity > 1) spending += (paper_quantity - 1) * 8000;
+  } else if (package_name === 'Snap Photobox Deluxe') {
+    spending = 50000;
+    if (person_quantity > 1) spending += (person_quantity - 1) * 30000;
+    if (duration > 7) spending += ((duration - 7) / 7) * 20000;
+    if (paper_quantity > 1) spending += (paper_quantity - 1) * 10000;
+  } else {
+    spending = 25000;
+  }
+
+  if (with_photographer) {
+    spending += 50000;
+  }
+
+  let promoDiscount = 0;
 
   db.beginTransaction(err => {
-    if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
+    if (err) {
+      console.error('Transaction error:', err);
+      return res.status(500).json({ success: false, message: 'Transaction error' });
+    }
 
-    if (paper_type_item_id && paper_quantity > 0) {
-      db.query('SELECT stock_quantity FROM inventory WHERE item_id = ?', [paper_type_item_id], (err, inv) => {
-        if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Error checking inventory' }));
-        
-        if (inv.length === 0 || inv[0].stock_quantity < paper_quantity) {
-          return db.rollback(() => res.status(400).json({ success: false, message: 'Quantity insufficient' }));
+    if (promo_id) {
+      db.query('SELECT * FROM promotions WHERE promo_id = ? AND status = "active"', [promo_id], (err, promoResults) => {
+        if (err) {
+          console.error('Error fetching promo:', err);
+          return db.rollback(() => res.status(500).json({ success: false, message: 'Error fetching promo' }));
         }
 
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
-          if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating inventory' }));
-          
+        if (promoResults.length === 0) {
+          return db.rollback(() => res.status(400).json({ success: false, message: 'Invalid or inactive promo' }));
+        }
+
+        const promo = promoResults[0];
+        if (promo.discount_type === 'percentage') {
+          promoDiscount = spending * (promo.discount_value / 100);
+        } else {
+          promoDiscount = promo.discount_value;
+        }
+
+        if (promoDiscount > spending) promoDiscount = spending;
+        spending -= promoDiscount;
+
+        if (paper_type_item_id && paper_quantity > 0) {
+          db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
+            if (err) {
+              console.error('Error updating inventory:', err);
+              return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating inventory' }));
+            }
+            insertVisit();
+          });
+        } else {
           insertVisit();
-        });
+        }
       });
     } else {
-      insertVisit();
+      if (paper_type_item_id && paper_quantity > 0) {
+        db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
+          if (err) {
+            console.error('Error updating inventory:', err);
+            return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating inventory' }));
+          }
+          insertVisit();
+        });
+      } else {
+        insertVisit();
+      }
     }
 
     function insertVisit() {
@@ -439,14 +486,20 @@ router.post('/:customer_id/visits', (req, res) => {
       db.query(insertQuery, [customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount], (err, result) => {
         if (err) {
           console.error('Error creating visit:', err);
-          return db.rollback(() => res.status(500).json({ success: false, message: 'Error creating visit' }));
+          return db.rollback(() => res.status(500).json({ success: false, message: 'Error creating visit: ' + err.message }));
         }
 
         db.query('UPDATE customers SET total_visits = total_visits + 1, total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [spending, visit_date, customer_id], (err) => {
-          if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating customer totals' }));
+          if (err) {
+            console.error('Error updating customer totals:', err);
+            return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating customer totals: ' + err.message }));
+          }
 
           db.commit(err => {
-            if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
+            if (err) {
+              console.error('Commit error:', err);
+              return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error: ' + err.message }));
+            }
             res.json({ success: true, message: 'Visit added successfully', data: { spending } });
           });
         });
