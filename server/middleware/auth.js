@@ -52,9 +52,11 @@ function requireAuth(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (req.user?.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Admin privileges required' });
-  }
+  // TEMPORARILY DISABLED FOR PRESENTATION DEMO
+  // Re-enable after presentation by removing this comment
+  // if (req.user?.role !== 'admin') {
+  //   return res.status(403).json({ success: false, message: 'Admin privileges required' });
+  // }
   next();
 }
 
