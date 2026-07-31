@@ -1007,6 +1007,8 @@ router.patch('/:pr_id/status', (req, res) => {
             });
           }
 
+          const updateQuery = 'UPDATE procurement_requests SET status = ?, pr_id = ?, rejection_reason = ? WHERE pr_id = ?';
+
           updateItemsPrId(pr_id, new_pr_id, (err) => {
             if (err) {
               console.error('Error updating items pr_id:', err);
@@ -1017,7 +1019,7 @@ router.patch('/:pr_id/status', (req, res) => {
               });
             }
 
-            db.query(updateQuery, [status, new_pr_id, base_id, rejection_reason || null, pr_id], (err, result) => {
+            db.query(updateQuery, [status, new_pr_id, rejection_reason || null, pr_id], (err, result) => {
               db.query('SET FOREIGN_KEY_CHECKS = 1');
 
               if (err) {
