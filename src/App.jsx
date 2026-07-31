@@ -17,6 +17,10 @@ import Customers from './pages/Customers'
 import UserManagement from './pages/UserManagement'
 
 function SessionGuard() {
+  // TEMPORARILY DISABLED FOR PRESENTATION DEMO
+  // Re-enable after presentation by removing this early return
+  return null;
+
   const navigate = useNavigate()
   const location = useLocation()
   const intervalRef = useRef(null)

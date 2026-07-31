@@ -18,6 +18,10 @@ function extractToken(req) {
 }
 
 function requireAuth(req, res, next) {
+  // TEMPORARILY DISABLED FOR PRESENTATION DEMO
+  // Re-enable after presentation by uncommenting the authentication logic below
+  return next();
+
   const token = extractToken(req);
   if (!token) {
     if (req.method === 'GET') return next();
