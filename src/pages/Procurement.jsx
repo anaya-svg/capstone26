@@ -49,10 +49,7 @@ function Procurement() {
 
   const fetchInventory = async () => {
     try {
-      const user = JSON.parse(sessionStorage.getItem('user'))
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory?status=active`, {
-        headers: { 'Authorization': `Bearer ${user?.session_token}` }
-      })
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory?limit=1000`)
       const data = await response.json()
       if (data.success) {
         setInventory(data.data)
@@ -64,10 +61,7 @@ function Procurement() {
 
   const fetchAssets = async () => {
     try {
-      const user = JSON.parse(sessionStorage.getItem('user'))
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/active`, {
-        headers: { 'Authorization': `Bearer ${user?.session_token}` }
-      })
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/assets/active`)
       const data = await response.json()
       if (data.success) {
         setAssets(data.data)
@@ -999,8 +993,16 @@ function Procurement() {
   }
 
   const handleUndraftRequest = (request) => {
-    setSelectedRequestForUndraft(request)
-    setShowUndraftModal(true)
+    // Check if PR has missing quotation
+    if (hasMissingQuotation(request.items)) {
+      // Open edit modal instead of undraft confirmation
+      handleEdit(request.pr_id)
+      showSystemNotice('info', 'Please fill in item costs before undrafting this PR')
+    } else {
+      // Proceed with normal undraft flow
+      setSelectedRequestForUndraft(request)
+      setShowUndraftModal(true)
+    }
   }
 
   const confirmUndraft = async () => {

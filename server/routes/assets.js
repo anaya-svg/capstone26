@@ -192,7 +192,7 @@ router.get('/active', (req, res) => {
   let query = `
     SELECT asset_id, name, category, status, location, \`condition\`, quantity
     FROM assets
-    WHERE status IN ('Available', 'In Use', 'Maintenance')
+    WHERE status IN ('Available', 'In Use')
   `;
   const params = [];
 
