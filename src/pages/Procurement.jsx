@@ -946,13 +946,15 @@ function Procurement() {
   const handleStatusChange = async (pr_id, newStatus, rejectionReason = null) => {
     console.log('handleStatusChange called', pr_id, newStatus, rejectionReason)
 
-    if (STATUS_REQUIRES_QUOTATION.includes(newStatus)) {
-      const targetRequest = procurementRequests.find((r) => r.pr_id === pr_id)
-      if (!targetRequest || hasMissingQuotation(targetRequest.items)) {
-        showSystemNotice('error', 'This request still needs quotation. Fill item cost (> 0) first before moving status.')
-        return
-      }
-    }
+    // TEMPORARILY DISABLED FOR PRESENTATION DEMO
+    // Re-enable after presentation by removing this comment
+    // if (STATUS_REQUIRES_QUOTATION.includes(newStatus)) {
+    //   const targetRequest = procurementRequests.find((r) => r.pr_id === pr_id)
+    //   if (!targetRequest || hasMissingQuotation(targetRequest.items)) {
+    //     showSystemNotice('error', 'This request still needs quotation. Fill item cost (> 0) first before moving status.')
+    //     return
+    //   }
+    // }
 
     try {
       const payload = { status: newStatus }
