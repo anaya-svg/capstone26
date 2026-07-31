@@ -425,87 +425,71 @@ router.post('/:customer_id/visits', (req, res) => {
 
   let promoDiscount = 0;
 
-  db.beginTransaction(err => {
-    if (err) {
-      console.error('Transaction error:', err);
-      return res.status(500).json({ success: false, message: 'Transaction error' });
-    }
+  // Simplified version without transactions for presentation demo
+  if (promo_id) {
+    db.query('SELECT * FROM promotions WHERE promo_id = ? AND status = "active"', [promo_id], (err, promoResults) => {
+      if (err) {
+        console.error('Error fetching promo:', err);
+        return res.status(500).json({ success: false, message: 'Error fetching promo: ' + err.message });
+      }
 
-    if (promo_id) {
-      db.query('SELECT * FROM promotions WHERE promo_id = ? AND status = "active"', [promo_id], (err, promoResults) => {
+      if (promoResults.length === 0) {
+        return res.status(400).json({ success: false, message: 'Invalid or inactive promo' });
+      }
+
+      const promo = promoResults[0];
+      if (promo.discount_type === 'percentage') {
+        promoDiscount = spending * (promo.discount_value / 100);
+      } else {
+        promoDiscount = promo.discount_value;
+      }
+
+      if (promoDiscount > spending) promoDiscount = spending;
+      spending -= promoDiscount;
+
+      processVisit();
+    });
+  } else {
+    processVisit();
+  }
+
+  function processVisit() {
+    // Update inventory first if needed
+    if (paper_type_item_id && paper_quantity > 0) {
+      db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
         if (err) {
-          console.error('Error fetching promo:', err);
-          return db.rollback(() => res.status(500).json({ success: false, message: 'Error fetching promo' }));
+          console.error('Error updating inventory:', err);
+          return res.status(500).json({ success: false, message: 'Error updating inventory: ' + err.message });
         }
-
-        if (promoResults.length === 0) {
-          return db.rollback(() => res.status(400).json({ success: false, message: 'Invalid or inactive promo' }));
-        }
-
-        const promo = promoResults[0];
-        if (promo.discount_type === 'percentage') {
-          promoDiscount = spending * (promo.discount_value / 100);
-        } else {
-          promoDiscount = promo.discount_value;
-        }
-
-        if (promoDiscount > spending) promoDiscount = spending;
-        spending -= promoDiscount;
-
-        if (paper_type_item_id && paper_quantity > 0) {
-          db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
-            if (err) {
-              console.error('Error updating inventory:', err);
-              return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating inventory' }));
-            }
-            insertVisit();
-          });
-        } else {
-          insertVisit();
-        }
+        insertVisit();
       });
     } else {
-      if (paper_type_item_id && paper_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
-          if (err) {
-            console.error('Error updating inventory:', err);
-            return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating inventory' }));
-          }
-          insertVisit();
-        });
-      } else {
-        insertVisit();
-      }
+      insertVisit();
     }
+  }
 
-    function insertVisit() {
-      const insertQuery = `
-        INSERT INTO customer_visits (customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id, discount_amount)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      db.query(insertQuery, [customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount], (err, result) => {
+  function insertVisit() {
+    const insertQuery = `
+      INSERT INTO customer_visits (customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id, discount_amount)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    db.query(insertQuery, [customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount], (err, result) => {
+      if (err) {
+        console.error('Error creating visit:', err);
+        return res.status(500).json({ success: false, message: 'Error creating visit: ' + err.message });
+      }
+
+      // Update customer totals
+      db.query('UPDATE customers SET total_visits = total_visits + 1, total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [spending, visit_date, customer_id], (err) => {
         if (err) {
-          console.error('Error creating visit:', err);
-          return db.rollback(() => res.status(500).json({ success: false, message: 'Error creating visit: ' + err.message }));
+          console.error('Error updating customer totals:', err);
+          return res.status(500).json({ success: false, message: 'Error updating customer totals: ' + err.message });
         }
 
-        db.query('UPDATE customers SET total_visits = total_visits + 1, total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [spending, visit_date, customer_id], (err) => {
-          if (err) {
-            console.error('Error updating customer totals:', err);
-            return db.rollback(() => res.status(500).json({ success: false, message: 'Error updating customer totals: ' + err.message }));
-          }
-
-          db.commit(err => {
-            if (err) {
-              console.error('Commit error:', err);
-              return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error: ' + err.message }));
-            }
-            res.json({ success: true, message: 'Visit added successfully', data: { spending } });
-          });
-        });
+        res.json({ success: true, message: 'Visit added successfully', data: { spending } });
       });
-    }
-  });
+    });
+  }
 });
 
 router.put('/:customer_id/visits/:visit_id', (req, res) => {
