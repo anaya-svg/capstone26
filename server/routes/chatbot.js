@@ -158,7 +158,6 @@ function buildPredictiveInsights(systemData) {
 function getFallbackResponse(message, data) {
   const lowerMessage = message.toLowerCase();
 
-  // Enhanced language detection - check for Indonesian keywords and patterns
   const indonesianKeywords = [
     'halo', 'hai', 'apa', 'bagaimana', 'bisa', 'tidak', 'ya', 'ada', 'berapa', 'berapa banyak',
     'saya', 'aku', 'kamu', 'anda', 'tolong', 'bantu', 'pelanggan', 'acara', 'aset', 'stok',
@@ -705,7 +704,6 @@ router.post('/chat', async (req, res) => {
   }
 });
 
-// Custom export endpoint for flexible column selection
 router.post('/custom-export', async (req, res) => {
   const db = req.app.locals.db;
   const { module, columns, filters } = req.body;
@@ -721,7 +719,6 @@ router.post('/custom-export', async (req, res) => {
     let query = '';
     let params = [];
 
-    // Column mapping for each module
     const columnMap = {
       assets: {
         'asset_id': 'asset_id',
@@ -793,7 +790,6 @@ router.post('/custom-export', async (req, res) => {
       });
     }
 
-    // Validate requested columns
     const validRequestedColumns = columns.filter(col => validColumns[col]);
     if (validRequestedColumns.length === 0) {
       return res.status(400).json({
@@ -802,11 +798,9 @@ router.post('/custom-export', async (req, res) => {
       });
     }
 
-    // Build query with selected columns
     const selectedColumns = validRequestedColumns.map(col => validColumns[col]);
     query = `SELECT ${selectedColumns.join(', ')} FROM ${tableName}`;
 
-    // Apply filters if provided
     if (filters) {
       if (filters.status) {
         query += ' WHERE status = ?';

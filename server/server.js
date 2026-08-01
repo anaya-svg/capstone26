@@ -677,7 +677,6 @@ const createInventoryTable = () => {
     } else {
       console.log('Inventory table ready');
       
-      // Cek dan tambahkan kolom yang hilang
       db.query(`SHOW COLUMNS FROM inventory`, (err, columns) => {
         if (err) {
           console.error('Error checking inventory columns:', err);
@@ -722,7 +721,6 @@ const createInventoryTable = () => {
               } else {
                 console.log(`Column ${col} added successfully`);
                 
-                // Generate display_id untuk data yang sudah ada
                 if (col === 'display_id') {
                   db.query(`UPDATE inventory SET display_id = CONCAT('INV-', LPAD(item_id, 3, '0')) WHERE display_id IS NULL`, (updateErr) => {
                     if (updateErr) console.error('Error generating display_id:', updateErr);

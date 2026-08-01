@@ -469,10 +469,8 @@ router.post('/', upload.single('attachment'), (req, res) => {
           });
         }
 
-        // Generate display_id based on item_id
         const displayId = `INV-${String(result.insertId).padStart(3, '0')}`;
         
-        // Update display_id in database
         db.query('UPDATE inventory SET display_id = ? WHERE item_id = ?', [displayId, result.insertId], (updateErr) => {
           if (updateErr) {
             console.error('Error updating display_id:', updateErr);

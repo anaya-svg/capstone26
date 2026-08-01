@@ -847,8 +847,6 @@ router.post('/', (req, res) => {
     : [];
 
   const proceedCreate = () => {
-    // Simplified version without transactions for presentation demo
-    // Database trigger will auto-generate event_id with format EVT-XXX
 
     const inventoryUpdates = [];
     if (backdrop_item_id && backdrop_item_id !== -1 && backdrop_quantity > 0) {
@@ -893,7 +891,6 @@ router.post('/', (req, res) => {
           const actual_event_id = result.insertId;
           console.log('Event created with auto ID:', actual_event_id);
 
-          // Fetch the event to get the generated event_id
           db.query('SELECT event_id FROM events WHERE id = ?', [actual_event_id], (err, idResults) => {
             if (err || idResults.length === 0) {
               console.error('Error fetching event_id:', err);
@@ -1114,7 +1111,6 @@ router.put('/:event_id', (req, res) => {
     : [];
 
   const proceedUpdate = () => {
-    // Simplified version without transactions for presentation demo
     db.query('SELECT * FROM events WHERE event_id = ?', [event_id], (err, results) => {
       if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Event not found' });
       const oldEvent = results[0];

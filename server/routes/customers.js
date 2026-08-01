@@ -236,7 +236,6 @@ router.post('/:customer_id/assign-in-studio', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
 
-  // Check if customer is already assigned to In Studio
   const checkQuery = 'SELECT is_in_studio FROM customers WHERE customer_id = ?';
   db.query(checkQuery, [customer_id], (err, results) => {
     if (err) {
@@ -309,7 +308,6 @@ router.post('/:customer_id/assign-off-site', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
 
-  // Check if customer is already assigned to Off Site
   const checkQuery = 'SELECT is_off_site FROM customers WHERE customer_id = ?';
   db.query(checkQuery, [customer_id], (err, results) => {
     if (err) {
@@ -476,7 +474,6 @@ router.post('/:customer_id/visits', (req, res) => {
 
   let promoDiscount = 0;
 
-  // Simplified version without transactions for presentation demo
   if (promo_id) {
     db.query('SELECT * FROM promotions WHERE promo_id = ? AND status = "active"', [promo_id], (err, promoResults) => {
       if (err) {
@@ -505,7 +502,6 @@ router.post('/:customer_id/visits', (req, res) => {
   }
 
   function processVisit() {
-    // Update inventory first if needed
     if (paper_type_item_id && paper_quantity > 0) {
       db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
         if (err) {
@@ -530,7 +526,6 @@ router.post('/:customer_id/visits', (req, res) => {
         return res.status(500).json({ success: false, message: 'Error creating visit: ' + err.message });
       }
 
-      // Update customer totals
       db.query('UPDATE customers SET total_visits = total_visits + 1, total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [spending, visit_date, customer_id], (err) => {
         if (err) {
           console.error('Error updating customer totals:', err);
@@ -587,7 +582,6 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
     const promoDiscount = Number(discount_amount) || 0;
     const spending = Math.max(0, subtotal - promoDiscount);
 
-    // Simplified version without transactions for presentation demo
     if (oldVisit.paper_type_item_id && oldVisit.paper_quantity > 0) {
       db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldVisit.paper_quantity, oldVisit.paper_type_item_id], (err) => {
         if (err) {
@@ -656,7 +650,6 @@ router.delete('/:customer_id/visits/:visit_id', (req, res) => {
 
     const visit = results[0];
 
-    // Simplified version without transactions for presentation demo
     if (visit.paper_type_item_id && visit.paper_quantity > 0) {
       db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [visit.paper_quantity, visit.paper_type_item_id], (err) => {
         if (err) {
