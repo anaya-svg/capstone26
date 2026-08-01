@@ -35,6 +35,8 @@ router.post('/', (req, res) => {
     return res.status(400).json({ success: false, message: 'Missing required promotional fields' });
   }
 
+  const checkQuery = 'SELECT * FROM promotions WHERE promo_code = ?';
+
   db.query(checkQuery, [promo_code], (err, results) => {
     if (err) {
       console.error('Error checking duplicate promo code:', err);
