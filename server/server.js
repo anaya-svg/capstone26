@@ -657,46 +657,47 @@ const createInventoryTable = () => {
     if (err) {
       console.error('Error checking for inventory_new table:', err);
     } else if (newResults.length > 0) {
-      console.log('Found inventory_new table, using it as inventory table...');
+      console.log('Found inventory_new table, copying data to inventory...');
       
-      // Cek apakah tabel inventory ada
-      db.query(`SHOW TABLES LIKE 'inventory'`, (err, invResults) => {
-        if (err) {
-          console.error('Error checking inventory table:', err);
-        } else if (invResults.length > 0) {
-          // Kedua tabel ada, drop inventory dan rename inventory_new
-          console.log('Both tables exist, replacing inventory with inventory_new...');
-          db.query(`SET FOREIGN_KEY_CHECKS = 0`, () => {
-            db.query(`DROP TABLE IF EXISTS inventory`, (err) => {
-              if (err) console.error('Error dropping inventory table:', err);
-              else {
-                db.query(`RENAME TABLE inventory_new TO inventory`, (err) => {
-                  if (err) console.error('Error renaming inventory_new to inventory:', err);
-                  else {
-                    console.log('Successfully renamed inventory_new to inventory');
-                    db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {
-                      console.log('Inventory table ready');
-                      // Lanjutkan dengan pengecekan struktur
-                      checkInventoryStructure();
+      // Hapus tabel inventory yang rusak jika ada
+      db.query(`SET FOREIGN_KEY_CHECKS = 0`, () => {
+        db.query(`DROP TABLE IF EXISTS inventory`, (err) => {
+          if (err) console.error('Error dropping inventory table:', err);
+          else {
+            console.log('Dropped old inventory table');
+            
+            // Copy struktur dan data dari inventory_new ke inventory
+            db.query(`CREATE TABLE inventory LIKE inventory_new`, (err) => {
+              if (err) {
+                console.error('Error creating inventory table from inventory_new structure:', err);
+              } else {
+                console.log('Created inventory table from inventory_new structure');
+                
+                // Copy data tanpa foreign key
+                db.query(`INSERT INTO inventory SELECT * FROM inventory_new`, (err) => {
+                  if (err) {
+                    console.error('Error copying data from inventory_new to inventory:', err);
+                  } else {
+                    console.log('Copied data from inventory_new to inventory');
+                    
+                    // Drop inventory_new
+                    db.query(`DROP TABLE inventory_new`, (err) => {
+                      if (err) console.error('Error dropping inventory_new table:', err);
+                      else {
+                        console.log('Dropped inventory_new table');
+                        db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {
+                          console.log('Inventory table ready');
+                          // Lanjutkan dengan pengecekan struktur
+                          checkInventoryStructure();
+                        });
+                      }
                     });
                   }
                 });
               }
             });
-          });
-        } else {
-          // Hanya inventory_new yang ada, rename ke inventory
-          console.log('Only inventory_new exists, renaming to inventory...');
-          db.query(`RENAME TABLE inventory_new TO inventory`, (err) => {
-            if (err) console.error('Error renaming inventory_new to inventory:', err);
-            else {
-              console.log('Successfully renamed inventory_new to inventory');
-              console.log('Inventory table ready');
-              // Lanjutkan dengan pengecekan struktur
-              checkInventoryStructure();
-            }
-          });
-        }
+          }
+        });
       });
     } else {
       // inventory_new tidak ada, coba buat tabel inventory baru
