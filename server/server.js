@@ -730,6 +730,11 @@ const createInventoryTable = () => {
           const executeNextStep = () => {
             if (stepIndex >= migrationSteps.length) {
               console.log('Inventory table migration completed successfully');
+              // Verify and fix any items that still don't have INV-XXX format
+              db.query(`UPDATE inventory SET item_id = CONCAT('INV-', LPAD(id, 3, '0')) WHERE item_id NOT LIKE 'INV-%'`, (err) => {
+                if (err) console.error('Error fixing item_id format:', err);
+                else console.log('Fixed item_id format for remaining items');
+              });
               return;
             }
             
@@ -749,6 +754,12 @@ const createInventoryTable = () => {
           };
           
           executeNextStep();
+        } else {
+          // Table already has new structure, but check if any items need INV-XXX format
+          db.query(`UPDATE inventory SET item_id = CONCAT('INV-', LPAD(id, 3, '0')) WHERE item_id NOT LIKE 'INV-%'`, (err) => {
+            if (err) console.error('Error fixing item_id format:', err);
+            else console.log('Fixed item_id format for items without INV-XXX format');
+          });
         }
         
         const requiredColumns = ['id', 'item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at'];
