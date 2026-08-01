@@ -695,7 +695,10 @@ const createInventoryTable = () => {
           
           // Safer migration: create new table, copy data, replace old table
           const migrationSteps = [
-            // Step 1: Create new table with correct structure
+            // Step 1: Disable foreign key checks
+            `SET FOREIGN_KEY_CHECKS = 0`,
+            
+            // Step 2: Create new table with correct structure
             `CREATE TABLE IF NOT EXISTS inventory_new (
               id INT AUTO_INCREMENT PRIMARY KEY,
               item_id VARCHAR(20) UNIQUE,
@@ -714,18 +717,21 @@ const createInventoryTable = () => {
               FOREIGN KEY (uom_id) REFERENCES uom(uom_id) ON DELETE SET NULL
             )`,
             
-            // Step 2: Copy data from old table to new table
+            // Step 3: Copy data from old table to new table
             `INSERT INTO inventory_new (item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, status, attachment, last_update, created_at)
              SELECT item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, status, attachment, last_update, created_at FROM inventory`,
              
-            // Step 3: Generate INV-XXX IDs for copied items
+            // Step 4: Generate INV-XXX IDs for copied items
             `UPDATE inventory_new SET item_id = CONCAT('INV-', LPAD(id, 3, '0'))`,
             
-            // Step 4: Drop old table
+            // Step 5: Drop old table
             `DROP TABLE inventory`,
             
-            // Step 5: Rename new table to inventory
-            `RENAME TABLE inventory_new TO inventory`
+            // Step 6: Rename new table to inventory
+            `RENAME TABLE inventory_new TO inventory`,
+            
+            // Step 7: Re-enable foreign key checks
+            `SET FOREIGN_KEY_CHECKS = 1`
           ];
           
           let stepIndex = 0;
@@ -738,6 +744,10 @@ const createInventoryTable = () => {
             db.query(migrationSteps[stepIndex], (err) => {
               if (err) {
                 console.error(`Migration step ${stepIndex + 1} failed:`, err);
+                // Re-enable FK checks even if migration fails
+                if (stepIndex !== 6) {
+                  db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {});
+                }
               } else {
                 console.log(`Migration step ${stepIndex + 1} completed`);
                 stepIndex++;
