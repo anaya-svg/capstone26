@@ -246,8 +246,9 @@ function Inventory() {
         return
       }
 
-      const headers = ['Item Name', 'Category', 'Stock Quantity', 'Minimum Stock', 'UOM', 'Vendor (Last used)', 'Stock Status', 'Last Update']
+      const headers = ['ID', 'Item Name', 'Category', 'Stock Quantity', 'Minimum Stock', 'UOM', 'Vendor (Last used)', 'Stock Status', 'Last Update']
       const rows = data.data.map((item) => [
+        item.item_id,
         item.item_name,
         item.category_name || 'N/A',
         item.stock_quantity,
@@ -1124,6 +1125,7 @@ function Inventory() {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-slate-700 sticky top-0 z-10">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Item Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stock Quantity</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stock Status</th>
@@ -1134,6 +1136,7 @@ function Inventory() {
               <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-gray-700">
               {inventory.map((item) => (
                 <tr key={item.item_id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.item_id}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.item_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{item.stock_quantity} {item.uom_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
