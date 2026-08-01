@@ -687,6 +687,46 @@ const createInventoryTable = () => {
         const existingColumns = columns.map(col => col.Field);
         console.log('Existing columns:', existingColumns);
         
+        // Check if we need to migrate from old structure (item_id as INT primary key) to new structure
+        const hasOldStructure = existingColumns.includes('item_id') && !existingColumns.includes('id');
+        
+        if (hasOldStructure) {
+          console.log('Migrating inventory table from old structure to new structure...');
+          
+          // Step 1: Add new id column
+          db.query(`ALTER TABLE inventory ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST`, (err) => {
+            if (err) {
+              console.error('Error adding id column:', err);
+            } else {
+              console.log('id column added');
+              
+              // Step 2: Convert item_id from INT to VARCHAR
+              db.query(`ALTER TABLE inventory MODIFY COLUMN item_id VARCHAR(20) UNIQUE`, (err) => {
+                if (err) {
+                  console.error('Error modifying item_id column:', err);
+                } else {
+                  console.log('item_id column modified to VARCHAR');
+                  
+                  // Step 3: Generate INV-XXX IDs for existing items
+                  db.query(`SELECT id FROM inventory ORDER BY id`, (err, results) => {
+                    if (err) {
+                      console.error('Error fetching inventory items:', err);
+                    } else {
+                      results.forEach((row, index) => {
+                        const newItemId = `INV-${String(index + 1).padStart(3, '0')}`;
+                        db.query(`UPDATE inventory SET item_id = ? WHERE id = ?`, [newItemId, row.id], (err) => {
+                          if (err) console.error(`Error updating item_id for id ${row.id}:`, err);
+                        });
+                      });
+                      console.log('Generated INV-XXX IDs for existing items');
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+        
         const requiredColumns = ['id', 'item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at'];
         
         requiredColumns.forEach(col => {
@@ -695,9 +735,11 @@ const createInventoryTable = () => {
             let alterQuery = '';
             
             if (col === 'id') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY, DROP PRIMARY KEY`;
+              // Skip if we already handled migration above
+              return;
             } else if (col === 'item_id') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN item_id VARCHAR(20) UNIQUE`;
+              // Skip if we already handled migration above
+              return;
             } else if (col === 'category_id') {
               alterQuery = `ALTER TABLE inventory ADD COLUMN category_id INT, ADD FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL`;
             } else if (col === 'uom_id') {

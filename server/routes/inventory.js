@@ -490,31 +490,53 @@ router.post('/', upload.single('attachment'), (req, res) => {
           });
         }
 
-        // Fetch the generated item_id
-        db.query('SELECT item_id FROM inventory WHERE id = ?', [result.insertId], (err, idResults) => {
-          if (err || idResults.length === 0) {
-            console.error('Error fetching item_id:', err);
-            return res.status(500).json({
-              success: false,
-              message: 'Error fetching item_id'
+        // Check if the table has the new structure with 'id' column
+        db.query(`SHOW COLUMNS FROM inventory LIKE 'id'`, (err, columns) => {
+          if (err || columns.length === 0) {
+            // Old structure: item_id is the primary key (INT)
+            res.json({
+              success: true,
+              message: 'Inventory item created successfully',
+              data: {
+                item_id: result.insertId,
+                item_name,
+                category_id,
+                stock_quantity,
+                minimum_stock,
+                uom_id,
+                vendor,
+                stock_status,
+                attachment: hasAttachmentColumn ? attachment : null
+              }
+            });
+          } else {
+            // New structure: fetch the generated item_id
+            db.query('SELECT item_id FROM inventory WHERE id = ?', [result.insertId], (err, idResults) => {
+              if (err || idResults.length === 0) {
+                console.error('Error fetching item_id:', err);
+                return res.status(500).json({
+                  success: false,
+                  message: 'Error fetching item_id'
+                });
+              }
+
+              res.json({
+                success: true,
+                message: 'Inventory item created successfully',
+                data: {
+                  item_id: idResults[0].item_id,
+                  item_name,
+                  category_id,
+                  stock_quantity,
+                  minimum_stock,
+                  uom_id,
+                  vendor,
+                  stock_status,
+                  attachment: hasAttachmentColumn ? attachment : null
+                }
+              });
             });
           }
-
-          res.json({
-            success: true,
-            message: 'Inventory item created successfully',
-            data: {
-              item_id: idResults[0].item_id,
-              item_name,
-              category_id,
-              stock_quantity,
-              minimum_stock,
-              uom_id,
-              vendor,
-              stock_status,
-              attachment: hasAttachmentColumn ? attachment : null
-            }
-          });
         });
       });
     });
