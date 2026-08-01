@@ -693,44 +693,36 @@ const createInventoryTable = () => {
         if (hasOldStructure) {
           console.log('Migrating inventory table from old structure to new structure...');
           
-          // Safer migration: create new table, copy data, replace old table
+          // Use temporary column approach to avoid auto-increment conflict
           const migrationSteps = [
             // Step 1: Disable foreign key checks
             `SET FOREIGN_KEY_CHECKS = 0`,
             
-            // Step 2: Create new table with correct structure
-            `CREATE TABLE IF NOT EXISTS inventory_new (
-              id INT AUTO_INCREMENT PRIMARY KEY,
-              item_id VARCHAR(20) UNIQUE,
-              item_name VARCHAR(255) NOT NULL,
-              category_id INT,
-              stock_quantity INT NOT NULL DEFAULT 0,
-              minimum_stock INT NOT NULL DEFAULT 0,
-              uom_id INT,
-              vendor VARCHAR(255),
-              stock_status ENUM('in_stock', 'low_stock', 'out_of_stock') DEFAULT 'in_stock',
-              status ENUM('active', 'drafted') DEFAULT 'active',
-              attachment VARCHAR(255),
-              last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-              FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL,
-              FOREIGN KEY (uom_id) REFERENCES uom(uom_id) ON DELETE SET NULL
-            )`,
+            // Step 2: Add temporary column to store old item_id values
+            `ALTER TABLE inventory ADD COLUMN temp_item_id INT`,
             
-            // Step 3: Copy data from old table to new table
-            `INSERT INTO inventory_new (item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, status, attachment, last_update, created_at)
-             SELECT item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, status, attachment, last_update, created_at FROM inventory`,
-             
-            // Step 4: Generate INV-XXX IDs for copied items
-            `UPDATE inventory_new SET item_id = CONCAT('INV-', LPAD(id, 3, '0'))`,
+            // Step 3: Copy item_id values to temp column
+            `UPDATE inventory SET temp_item_id = item_id`,
             
-            // Step 5: Drop old table
-            `DROP TABLE inventory`,
+            // Step 4: Drop primary key from item_id
+            `ALTER TABLE inventory DROP PRIMARY KEY`,
             
-            // Step 6: Rename new table to inventory
-            `RENAME TABLE inventory_new TO inventory`,
+            // Step 5: Remove auto_increment from item_id
+            `ALTER TABLE inventory MODIFY COLUMN item_id INT`,
             
-            // Step 7: Re-enable foreign key checks
+            // Step 6: Add new id column as auto-increment primary key
+            `ALTER TABLE inventory ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST`,
+            
+            // Step 7: Convert item_id from INT to VARCHAR
+            `ALTER TABLE inventory MODIFY COLUMN item_id VARCHAR(20) UNIQUE`,
+            
+            // Step 8: Generate INV-XXX IDs using the temp values
+            `UPDATE inventory SET item_id = CONCAT('INV-', LPAD(temp_item_id, 3, '0'))`,
+            
+            // Step 9: Drop temporary column
+            `ALTER TABLE inventory DROP COLUMN temp_item_id`,
+            
+            // Step 10: Re-enable foreign key checks
             `SET FOREIGN_KEY_CHECKS = 1`
           ];
           
@@ -745,7 +737,7 @@ const createInventoryTable = () => {
               if (err) {
                 console.error(`Migration step ${stepIndex + 1} failed:`, err);
                 // Re-enable FK checks even if migration fails
-                if (stepIndex !== 6) {
+                if (stepIndex !== 9) {
                   db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {});
                 }
               } else {
