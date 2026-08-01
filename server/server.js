@@ -654,7 +654,8 @@ const createCustomerVisitsTable = () => {
 const createInventoryTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS inventory (
-      item_id INT AUTO_INCREMENT PRIMARY KEY,
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      item_id VARCHAR(20) UNIQUE,
       item_name VARCHAR(255) NOT NULL,
       category_id INT,
       stock_quantity INT NOT NULL DEFAULT 0,
@@ -686,14 +687,18 @@ const createInventoryTable = () => {
         const existingColumns = columns.map(col => col.Field);
         console.log('Existing columns:', existingColumns);
         
-        const requiredColumns = ['item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at'];
+        const requiredColumns = ['id', 'item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at'];
         
         requiredColumns.forEach(col => {
           if (!existingColumns.includes(col)) {
             console.log(`Adding column: ${col}`);
             let alterQuery = '';
             
-            if (col === 'category_id') {
+            if (col === 'id') {
+              alterQuery = `ALTER TABLE inventory ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY, DROP PRIMARY KEY`;
+            } else if (col === 'item_id') {
+              alterQuery = `ALTER TABLE inventory ADD COLUMN item_id VARCHAR(20) UNIQUE`;
+            } else if (col === 'category_id') {
               alterQuery = `ALTER TABLE inventory ADD COLUMN category_id INT, ADD FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL`;
             } else if (col === 'uom_id') {
               alterQuery = `ALTER TABLE inventory ADD COLUMN uom_id INT, ADD FOREIGN KEY (uom_id) REFERENCES uom(uom_id) ON DELETE SET NULL`;
@@ -726,6 +731,42 @@ const createInventoryTable = () => {
         });
       });
     }
+  });
+};
+
+const createInventoryIdTrigger = () => {
+  const checkTriggerQuery = `
+    SELECT COUNT(*) as count FROM information_schema.triggers
+    WHERE trigger_name = 'before_inventory_insert'
+    AND trigger_schema = DATABASE()
+  `;
+
+  db.query(checkTriggerQuery, (err, results) => {
+    if (err) {
+      console.error('Error checking inventory ID trigger:', err);
+      return;
+    }
+
+    if (results[0].count > 0) {
+      console.log('Inventory ID trigger already exists');
+      return;
+    }
+
+    const createTriggerQuery = `
+      CREATE TRIGGER before_inventory_insert
+      BEFORE INSERT ON inventory
+      FOR EACH ROW
+      BEGIN
+        IF NEW.item_id IS NULL THEN
+          SET NEW.item_id = CONCAT('INV-', LPAD((SELECT COALESCE(MAX(CAST(SUBSTRING(item_id, 5) AS UNSIGNED)), 0) + 1 FROM inventory), 3, '0'));
+        END IF;
+      END
+    `;
+
+    db.query(createTriggerQuery, (err) => {
+      if (err) console.error('Error creating inventory ID trigger:', err);
+      else console.log('Inventory ID trigger ready');
+    });
   });
 };
 
@@ -902,6 +943,7 @@ createCustomerVisitsTable();
 createCategoriesTable();
 createUOMTable();
 createInventoryTable();
+createInventoryIdTrigger();
 
 app.get('/', (req, res) => {
   res.json({ message: 'SnapFun ERP API is running' });
