@@ -690,6 +690,37 @@ const createInventoryTable = () => {
         // Check if we need to migrate from old structure (item_id as INT primary key) to new structure
         const hasOldStructure = existingColumns.includes('item_id') && !existingColumns.includes('id');
         
+        // Check for duplicate tables from failed migrations
+        db.query(`SHOW TABLES LIKE 'inventory_new'`, (err, results) => {
+          if (err) {
+            console.error('Error checking for inventory_new table:', err);
+          } else if (results.length > 0) {
+            console.log('Found inventory_new table from previous migration, cleaning up...');
+            
+            // Disable FK checks
+            db.query(`SET FOREIGN_KEY_CHECKS = 0`, () => {
+              // Drop old inventory table
+              db.query(`DROP TABLE IF EXISTS inventory`, (err) => {
+                if (err) console.error('Error dropping old inventory table:', err);
+                else {
+                  console.log('Dropped old inventory table');
+                  // Rename inventory_new to inventory
+                  db.query(`RENAME TABLE inventory_new TO inventory`, (err) => {
+                    if (err) console.error('Error renaming inventory_new to inventory:', err);
+                    else {
+                      console.log('Renamed inventory_new to inventory');
+                      // Re-enable FK checks
+                      db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {
+                        console.log('Inventory table cleanup completed');
+                      });
+                    }
+                  });
+                }
+              });
+            });
+          }
+        });
+        
         if (hasOldStructure) {
           console.log('Migrating inventory table from old structure to new structure...');
           
