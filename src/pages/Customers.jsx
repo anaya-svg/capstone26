@@ -591,8 +591,7 @@ function Customers() {
         person_quantity: 1,
         duration: 7,
         paper_quantity: 1,
-        with_photographer: false,
-        spending: 20000
+        with_photographer: false
       }
     } else if (packageName === 'Snap Self Photo') {
       defaultConfig = {
@@ -600,8 +599,7 @@ function Customers() {
         person_quantity: 2,
         duration: 15,
         paper_quantity: 2,
-        with_photographer: false,
-        spending: 60000
+        with_photographer: false
       }
     } else if (packageName === 'Snap Pas Photo') {
       defaultConfig = {
@@ -609,12 +607,11 @@ function Customers() {
         person_quantity: 1,
         duration: 7,
         paper_quantity: 1,
-        with_photographer: false,
-        spending: 35000
+        with_photographer: false
       }
     }
 
-    setVisitFormData(prev => ({ ...prev, ...defaultConfig }))
+    setVisitFormData(prev => ({ ...prev, ...defaultConfig, spending: calculateSpending(defaultConfig) }))
     setShowSelectPackageModal(false)
     setShowPackageConfigModal(true)
   }

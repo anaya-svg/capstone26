@@ -97,6 +97,8 @@ router.put('/:id', (req, res) => {
     status
   } = req.body;
 
+  const checkQuery = 'SELECT * FROM promotions WHERE promo_code = ? AND promo_id != ?';
+
   db.query(checkQuery, [promo_code, promoId], (err, results) => {
     if (err) {
       console.error('Error checking duplicate code:', err);
