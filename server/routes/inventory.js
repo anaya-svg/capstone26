@@ -46,7 +46,8 @@ router.get('/', (req, res) => {
 
   let query = `
     SELECT 
-      i.item_id, 
+      i.item_id,
+      i.display_id,
       i.item_name, 
       c.category_name, 
       i.stock_quantity, 
@@ -160,11 +161,11 @@ router.get('/', (req, res) => {
 
 router.get('/export', (req, res) => {
   const db = req.app.locals.db;
-  const { stock_status, search } = req.query;
+  const { status } = req.query;
 
   let query = `
     SELECT 
-      i.item_id, 
+      i.display_id,
       i.item_name, 
       c.category_name, 
       i.stock_quantity, 
@@ -175,8 +176,6 @@ router.get('/export', (req, res) => {
       i.status,
       i.last_update, 
       i.created_at,
-      i.category_id,
-      i.uom_id,
       i.attachment,
       (
         SELECT pr.supplier
@@ -262,9 +261,10 @@ router.get('/low-stock', (req, res) => {
   const db = req.app.locals.db;
   const { status } = req.query;
 
-  const query = `
+  let query = `
     SELECT 
-      i.item_id, 
+      i.item_id,
+      i.display_id,
       i.item_name, 
       c.category_name, 
       i.stock_quantity, 
@@ -359,7 +359,8 @@ router.get('/:id', (req, res) => {
 
   const query = `
     SELECT 
-      i.item_id, 
+      i.item_id,
+      i.display_id,
       i.item_name, 
       c.category_name, 
       i.stock_quantity, 
@@ -372,29 +373,7 @@ router.get('/:id', (req, res) => {
       i.created_at,
       i.category_id,
       i.uom_id,
-      i.attachment,
-      (
-        SELECT pr.supplier
-        FROM procurement_request_items pri
-        JOIN procurement_requests pr ON pr.pr_id = pri.pr_id
-        WHERE pri.item_id = i.item_id
-          AND pri.item_classification = 'Supplies'
-          AND pr.status = 'Received'
-          AND COALESCE(pr.deleted_from_received, 0) = 0
-        ORDER BY pr.created_at DESC, pr.pr_id DESC
-        LIMIT 1
-      ) AS last_procurement_vendor,
-      (
-        SELECT pr.pr_id
-        FROM procurement_request_items pri
-        JOIN procurement_requests pr ON pr.pr_id = pri.pr_id
-        WHERE pri.item_id = i.item_id
-          AND pri.item_classification = 'Supplies'
-          AND pr.status = 'Received'
-          AND COALESCE(pr.deleted_from_received, 0) = 0
-        ORDER BY pr.created_at DESC, pr.pr_id DESC
-        LIMIT 1
-      ) AS last_procurement_gr_id
+      i.attachment
     FROM inventory i
     LEFT JOIN categories c ON i.category_id = c.category_id
     LEFT JOIN uom u ON i.uom_id = u.uom_id
@@ -490,11 +469,22 @@ router.post('/', upload.single('attachment'), (req, res) => {
           });
         }
 
+        // Generate display_id based on item_id
+        const displayId = `INV-${String(result.insertId).padStart(3, '0')}`;
+        
+        // Update display_id in database
+        db.query('UPDATE inventory SET display_id = ? WHERE item_id = ?', [displayId, result.insertId], (updateErr) => {
+          if (updateErr) {
+            console.error('Error updating display_id:', updateErr);
+          }
+        });
+
         res.json({
           success: true,
           message: 'Inventory item created successfully',
           data: {
             item_id: result.insertId,
+            display_id: displayId,
             item_name,
             category_id,
             stock_quantity,

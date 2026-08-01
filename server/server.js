@@ -685,14 +685,16 @@ const createInventoryTable = () => {
         }
         
         const existingColumns = columns.map(col => col.Field);
-        const requiredColumns = ['item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at'];
+        const requiredColumns = ['item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at', 'display_id'];
         
         requiredColumns.forEach(col => {
           if (!existingColumns.includes(col)) {
             console.log(`Adding column: ${col}`);
             let alterQuery = '';
             
-            if (col === 'category_id') {
+            if (col === 'display_id') {
+              alterQuery = `ALTER TABLE inventory ADD COLUMN display_id VARCHAR(20)`;
+            } else if (col === 'category_id') {
               alterQuery = `ALTER TABLE inventory ADD COLUMN category_id INT, ADD FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL`;
             } else if (col === 'uom_id') {
               alterQuery = `ALTER TABLE inventory ADD COLUMN uom_id INT, ADD FOREIGN KEY (uom_id) REFERENCES uom(uom_id) ON DELETE SET NULL`;
@@ -719,6 +721,14 @@ const createInventoryTable = () => {
                 console.error(`Error adding column ${col}:`, alterErr);
               } else {
                 console.log(`Column ${col} added successfully`);
+                
+                // Generate display_id untuk data yang sudah ada
+                if (col === 'display_id') {
+                  db.query(`UPDATE inventory SET display_id = CONCAT('INV-', LPAD(item_id, 3, '0')) WHERE display_id IS NULL`, (updateErr) => {
+                    if (updateErr) console.error('Error generating display_id:', updateErr);
+                    else console.log('Generated display_id for existing records');
+                  });
+                }
               }
             });
           }
