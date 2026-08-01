@@ -847,90 +847,87 @@ router.post('/', (req, res) => {
     : [];
 
   const proceedCreate = () => {
-    db.beginTransaction(err => {
-      if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
+    // Simplified version without transactions for presentation demo
+    const inventoryUpdates = [];
+    if (backdrop_item_id && backdrop_item_id !== -1 && backdrop_quantity > 0) {
+      inventoryUpdates.push(new Promise((resolve, reject) => {
+        db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [backdrop_quantity, backdrop_item_id], (err) => {
+          if (err) reject(err); else resolve();
+        });
+      }));
+    }
+    if (print_item_id && print_quantity > 0) {
+      inventoryUpdates.push(new Promise((resolve, reject) => {
+        db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [print_quantity, print_item_id], (err) => {
+          if (err) reject(err); else resolve();
+        });
+      }));
+    }
 
-      const inventoryUpdates = [];
-      if (backdrop_item_id && backdrop_item_id !== -1 && backdrop_quantity > 0) {
-        inventoryUpdates.push(new Promise((resolve, reject) => {
-          db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [backdrop_quantity, backdrop_item_id], (err) => {
-            if (err) reject(err); else resolve();
-          });
-        }));
-      }
-      if (print_item_id && print_quantity > 0) {
-        inventoryUpdates.push(new Promise((resolve, reject) => {
-          db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [print_quantity, print_item_id], (err) => {
-            if (err) reject(err); else resolve();
-          });
-        }));
-      }
+    Promise.all(inventoryUpdates)
+      .then(() => {
+        const eventQuery = `
+          INSERT INTO events (
+            event_name, start_date, end_date, location, customer, customer_id, 
+            package_name, extra_hours, backdrop_item_id, backdrop_quantity, 
+            guestbook_album, gif_boomerang, print_item_id, print_quantity, 
+            expected_revenue, status, booth_setup, created_by, promo_id, discount_amount
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
 
-      Promise.all(inventoryUpdates)
-        .then(() => {
-          const eventQuery = `
-            INSERT INTO events (
-              event_name, start_date, end_date, location, customer, customer_id, 
-              package_name, extra_hours, backdrop_item_id, backdrop_quantity, 
-              guestbook_album, gif_boomerang, print_item_id, print_quantity, 
-              expected_revenue, status, booth_setup, created_by, promo_id, discount_amount
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
+        db.query(eventQuery, [
+          event_name, start_date, end_date, location, customer, customer_id || null,
+          package_name, extra_hours || 0, backdrop_item_id, backdrop_quantity || 0,
+          guestbook_album || false, gif_boomerang || false, print_item_id, print_quantity || 0,
+          expected_revenue || 0, autoStatus, booth_setup || null, created_by || 'N/A',
+          promo_id || null, Number(discount_amount) || 0.00
+        ], (err, result) => {
+          if (err) {
+            console.error('Error creating event:', err);
+            return res.status(500).json({ success: false, message: 'Error creating event' });
+          }
 
-          db.query(eventQuery, [
-            event_name, start_date, end_date, location, customer, customer_id || null,
-            package_name, extra_hours || 0, backdrop_item_id, backdrop_quantity || 0,
-            guestbook_album || false, gif_boomerang || false, print_item_id, print_quantity || 0,
-            expected_revenue || 0, autoStatus, booth_setup || null, created_by || 'N/A',
-            promo_id || null, Number(discount_amount) || 0.00
-          ], (err, result) => {
-            if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Error creating event' }));
+          const actual_event_id = result.insertId;
 
-            db.query('SELECT event_id FROM events WHERE id = LAST_INSERT_ID()', (err, idResult) => {
-              if (err || idResult.length === 0) return db.rollback(() => res.status(500).json({ success: false, message: 'ID error' }));
-              const actual_event_id = idResult[0].event_id;
+          if (customer_id && expected_revenue) {
+            db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [expected_revenue, customer_id]);
+          }
 
-              if (customer_id && expected_revenue) {
-                db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [expected_revenue, customer_id]);
-              }
-
-              if (assets && assets.length > 0) {
-                const assetPromises = assets.map(asset => {
-                  return new Promise((resolve, reject) => {
-                    db.query('SELECT location FROM assets WHERE asset_id = ?', [asset.asset_id], (err, locResults) => {
-                      const originalLocation = locResults.length > 0 ? locResults[0].location : null;
-                      db.query('INSERT INTO event_assets (event_id, asset_id, quantity, original_location) VALUES (?, ?, ?, ?)', 
-                        [actual_event_id, asset.asset_id, asset.quantity, originalLocation], (err) => {
-                        if (err) reject(err); else resolve();
-                      });
+          if (assets && assets.length > 0) {
+            const assetPromises = assets.map(asset => {
+              return new Promise((resolve, reject) => {
+                db.query('SELECT location FROM assets WHERE asset_id = ?', [asset.asset_id], (err, locResults) => {
+                  const originalLocation = locResults.length > 0 ? locResults[0].location : null;
+                  db.query('INSERT INTO event_assets (event_id, asset_id, quantity, original_location) VALUES (?, ?, ?, ?)', 
+                    [actual_event_id, asset.asset_id, asset.quantity, originalLocation], (err) => {
+                      if (err) reject(err); else resolve();
                     });
-                  });
                 });
-
-                Promise.all(assetPromises)
-                  .then(() => {
-                    if (autoStatus === 'in_progress') {
-                      updateAssetLocations(actual_event_id, 'Off Site', db);
-                      updateAssetStatusByEventStatus(actual_event_id, 'in_progress', db);
-                    }
-                    db.commit(err => {
-                      if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
-                      res.json({ success: true, message: 'Event created successfully', event_id: actual_event_id });
-                    });
-                  })
-                  .catch(err => db.rollback(() => res.status(500).json({ success: false, message: 'Asset error' })));
-              } else {
-                db.commit(err => {
-                  if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
-                  res.json({ success: true, message: 'Event created successfully', event_id: actual_event_id });
-                });
-              }
+              });
             });
-          });
-        })
-        .catch(err => db.rollback(() => res.status(500).json({ success: false, message: 'Inventory error' })));
-    });
+
+            Promise.all(assetPromises)
+              .then(() => {
+                if (autoStatus === 'in_progress') {
+                  updateAssetLocations(actual_event_id, 'Off Site', db);
+                  updateAssetStatusByEventStatus(actual_event_id, 'in_progress', db);
+                }
+                res.json({ success: true, message: 'Event created successfully', event_id: actual_event_id });
+              })
+              .catch(err => {
+                console.error('Error adding assets:', err);
+                res.status(500).json({ success: false, message: 'Asset error' });
+              });
+          } else {
+            res.json({ success: true, message: 'Event created successfully', event_id: actual_event_id });
+          }
+        });
+      })
+      .catch(err => {
+        console.error('Error updating inventory:', err);
+        res.status(500).json({ success: false, message: 'Inventory error' });
+      });
   };
 
   if (assetIds.length > 0) {
@@ -1093,87 +1090,107 @@ router.put('/:event_id', (req, res) => {
     : [];
 
   const proceedUpdate = () => {
-    db.beginTransaction(err => {
-      if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
+    // Simplified version without transactions for presentation demo
+    db.query('SELECT * FROM events WHERE event_id = ?', [event_id], (err, results) => {
+      if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Event not found' });
+      const oldEvent = results[0];
 
-      db.query('SELECT * FROM events WHERE event_id = ?', [event_id], (err, results) => {
-        if (err || results.length === 0) return db.rollback(() => res.status(404).json({ success: false, message: 'Event not found' }));
-        const oldEvent = results[0];
-
+      const inventoryUpdates = [];
       if (oldEvent.backdrop_item_id && oldEvent.backdrop_item_id !== -1 && oldEvent.backdrop_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldEvent.backdrop_quantity, oldEvent.backdrop_item_id]);
+        inventoryUpdates.push(new Promise((resolve, reject) => {
+          db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldEvent.backdrop_quantity, oldEvent.backdrop_item_id], (err) => {
+            if (err) reject(err); else resolve();
+          });
+        }));
       }
       if (oldEvent.print_item_id && oldEvent.print_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldEvent.print_quantity, oldEvent.print_item_id]);
+        inventoryUpdates.push(new Promise((resolve, reject) => {
+          db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldEvent.print_quantity, oldEvent.print_item_id], (err) => {
+            if (err) reject(err); else resolve();
+          });
+        }));
       }
-
       if (backdrop_item_id && backdrop_item_id !== -1 && backdrop_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [backdrop_quantity, backdrop_item_id]);
+        inventoryUpdates.push(new Promise((resolve, reject) => {
+          db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [backdrop_quantity, backdrop_item_id], (err) => {
+            if (err) reject(err); else resolve();
+          });
+        }));
       }
       if (print_item_id && print_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [print_quantity, print_item_id]);
+        inventoryUpdates.push(new Promise((resolve, reject) => {
+          db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [print_quantity, print_item_id], (err) => {
+            if (err) reject(err); else resolve();
+          });
+        }));
       }
 
-      const updateQuery = `
-        UPDATE events SET 
-          event_name = ?, start_date = ?, end_date = ?, location = ?, status = ?,
-          package_name = ?, extra_hours = ?, backdrop_item_id = ?, backdrop_quantity = ?,
-          guestbook_album = ?, gif_boomerang = ?, print_item_id = ?, print_quantity = ?,
-          expected_revenue = ?, booth_setup = ?, promo_id = ?, discount_amount = ?
-        WHERE event_id = ?
-      `;
+      Promise.all(inventoryUpdates)
+        .then(() => {
+          const updateQuery = `
+            UPDATE events SET 
+              event_name = ?, start_date = ?, end_date = ?, location = ?, status = ?,
+              package_name = ?, extra_hours = ?, backdrop_item_id = ?, backdrop_quantity = ?,
+              guestbook_album = ?, gif_boomerang = ?, print_item_id = ?, print_quantity = ?,
+              expected_revenue = ?, booth_setup = ?, promo_id = ?, discount_amount = ?
+            WHERE event_id = ?
+          `;
 
-        db.query(updateQuery, [
-          event_name, start_date, end_date, location, autoStatus,
-          package_name, extra_hours, backdrop_item_id, backdrop_quantity,
-          guestbook_album, gif_boomerang, print_item_id, print_quantity,
-          expected_revenue, booth_setup || null, promo_id || null, Number(discount_amount) || 0.00, event_id
-        ], (err) => {
-          if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Update error' }));
+          db.query(updateQuery, [
+            event_name, start_date, end_date, location, autoStatus,
+            package_name, extra_hours, backdrop_item_id, backdrop_quantity,
+            guestbook_album, gif_boomerang, print_item_id, print_quantity,
+            expected_revenue, booth_setup || null, promo_id || null, Number(discount_amount) || 0.00, event_id
+          ], (err) => {
+            if (err) {
+              console.error('Error updating event:', err);
+              return res.status(500).json({ success: false, message: 'Update error' });
+            }
 
-          const revDiff = expected_revenue - oldEvent.expected_revenue;
-          if (customer_id && revDiff !== 0) {
-            db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [revDiff, customer_id]);
-          }
+            const revDiff = expected_revenue - oldEvent.expected_revenue;
+            if (customer_id && revDiff !== 0) {
+              db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [revDiff, customer_id]);
+            }
 
-          db.query('DELETE FROM event_assets WHERE event_id = ?', [event_id], (err) => {
-            if (assets && assets.length > 0) {
-              const assetPromises = assets.map(asset => {
-                return new Promise((resolve, reject) => {
-                  db.query('SELECT location FROM assets WHERE asset_id = ?', [asset.asset_id], (err, locResults) => {
-                    const originalLocation = locResults.length > 0 ? locResults[0].location : null;
-                    db.query('INSERT INTO event_assets (event_id, asset_id, quantity, original_location) VALUES (?, ?, ?, ?)', 
-                      [event_id, asset.asset_id, asset.quantity, originalLocation], (err) => {
-                      if (err) reject(err); else resolve();
+            db.query('DELETE FROM event_assets WHERE event_id = ?', [event_id], (err) => {
+              if (assets && assets.length > 0) {
+                const assetPromises = assets.map(asset => {
+                  return new Promise((resolve, reject) => {
+                    db.query('SELECT location FROM assets WHERE asset_id = ?', [asset.asset_id], (err, locResults) => {
+                      const originalLocation = locResults.length > 0 ? locResults[0].location : null;
+                      db.query('INSERT INTO event_assets (event_id, asset_id, quantity, original_location) VALUES (?, ?, ?, ?)', 
+                        [event_id, asset.asset_id, asset.quantity, originalLocation], (err) => {
+                        if (err) reject(err); else resolve();
+                      });
                     });
                   });
                 });
-              });
 
-              Promise.all(assetPromises)
-                .then(() => {
-                  if (autoStatus === 'in_progress') {
-                    updateAssetLocations(event_id, 'Off Site', db);
-                    updateAssetStatusByEventStatus(event_id, 'in_progress', db);
-                  } else if (autoStatus === 'completed') {
-                    restoreAssetLocations(event_id, db);
-                    updateAssetStatusByEventStatus(event_id, 'completed', db);
-                  }
-                  db.commit(err => {
-                    if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
+                Promise.all(assetPromises)
+                  .then(() => {
+                    if (autoStatus === 'in_progress') {
+                      updateAssetLocations(event_id, 'Off Site', db);
+                      updateAssetStatusByEventStatus(event_id, 'in_progress', db);
+                    } else if (autoStatus === 'completed') {
+                      restoreAssetLocations(event_id, db);
+                      updateAssetStatusByEventStatus(event_id, 'completed', db);
+                    }
                     res.json({ success: true, message: 'Event updated successfully' });
+                  })
+                  .catch(err => {
+                    console.error('Error adding assets:', err);
+                    res.status(500).json({ success: false, message: 'Asset error' });
                   });
-                })
-                .catch(err => db.rollback(() => res.status(500).json({ success: false, message: 'Asset error' })));
-            } else {
-              db.commit(err => {
-                if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
+              } else {
                 res.json({ success: true, message: 'Event updated successfully' });
-              });
-            }
+              }
+            });
           });
+        })
+        .catch(err => {
+          console.error('Error updating inventory:', err);
+          res.status(500).json({ success: false, message: 'Inventory error' });
         });
-      });
     });
   };
 
