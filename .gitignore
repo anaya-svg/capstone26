@@ -32,3 +32,7 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+# Presentation scripts
+final_defense_presentation_script.md
+final_defense_cue_cards.md
