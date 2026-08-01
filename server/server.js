@@ -697,26 +697,57 @@ const createInventoryTable = () => {
           } else if (results.length > 0) {
             console.log('Found inventory_new table from previous migration, cleaning up...');
             
-            // Disable FK checks
-            db.query(`SET FOREIGN_KEY_CHECKS = 0`, () => {
-              // Drop old inventory table
-              db.query(`DROP TABLE IF EXISTS inventory`, (err) => {
-                if (err) console.error('Error dropping old inventory table:', err);
-                else {
-                  console.log('Dropped old inventory table');
-                  // Rename inventory_new to inventory
-                  db.query(`RENAME TABLE inventory_new TO inventory`, (err) => {
-                    if (err) console.error('Error renaming inventory_new to inventory:', err);
-                    else {
-                      console.log('Renamed inventory_new to inventory');
-                      // Re-enable FK checks
-                      db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {
-                        console.log('Inventory table cleanup completed');
-                      });
-                    }
-                  });
-                }
-              });
+            // Check which table has data
+            db.query(`SELECT COUNT(*) as count FROM inventory`, (err, inventoryCount) => {
+              if (err) {
+                console.error('Error checking inventory count:', err);
+              } else {
+                db.query(`SELECT COUNT(*) as count FROM inventory_new`, (err, newCount) => {
+                  if (err) {
+                    console.error('Error checking inventory_new count:', err);
+                  } else {
+                    const invCount = inventoryCount[0]?.count || 0;
+                    const newInvCount = newCount[0]?.count || 0;
+                    
+                    console.log(`Inventory count: ${invCount}, inventory_new count: ${newInvCount}`);
+                    
+                    // Disable FK checks
+                    db.query(`SET FOREIGN_KEY_CHECKS = 0`, () => {
+                      if (newInvCount > invCount) {
+                        // inventory_new has more data, keep it
+                        console.log('Keeping inventory_new table (has more data)');
+                        db.query(`DROP TABLE IF EXISTS inventory`, (err) => {
+                          if (err) console.error('Error dropping old inventory table:', err);
+                          else {
+                            console.log('Dropped old inventory table');
+                            db.query(`RENAME TABLE inventory_new TO inventory`, (err) => {
+                              if (err) console.error('Error renaming inventory_new to inventory:', err);
+                              else {
+                                console.log('Renamed inventory_new to inventory');
+                                db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {
+                                  console.log('Inventory table cleanup completed');
+                                });
+                              }
+                            });
+                          }
+                        });
+                      } else {
+                        // inventory has equal or more data, drop inventory_new
+                        console.log('Keeping inventory table (has equal or more data)');
+                        db.query(`DROP TABLE IF EXISTS inventory_new`, (err) => {
+                          if (err) console.error('Error dropping inventory_new table:', err);
+                          else {
+                            console.log('Dropped inventory_new table');
+                            db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {
+                              console.log('Inventory table cleanup completed');
+                            });
+                          }
+                        });
+                      }
+                    });
+                  }
+                });
+              }
             });
           }
         });
