@@ -652,32 +652,17 @@ const createCustomerVisitsTable = () => {
 };
 
 const createInventoryTable = () => {
-  const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS inventory (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      item_id VARCHAR(20) UNIQUE,
-      item_name VARCHAR(255) NOT NULL,
-      category_id INT,
-      stock_quantity INT NOT NULL DEFAULT 0,
-      minimum_stock INT NOT NULL DEFAULT 0,
-      uom_id INT,
-      vendor VARCHAR(255),
-      stock_status ENUM('in_stock', 'low_stock', 'out_of_stock') DEFAULT 'in_stock',
-      status ENUM('active', 'drafted') DEFAULT 'active',
-      attachment VARCHAR(255),
-      last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL,
-      FOREIGN KEY (uom_id) REFERENCES uom(uom_id) ON DELETE SET NULL
-    )
-  `;
-
-  db.query(createTableQuery, (err, result) => {
+  // Cek apakah tabel inventory sudah ada
+  db.query(`SHOW TABLES LIKE 'inventory'`, (err, results) => {
     if (err) {
-      console.error('Error creating inventory table:', err);
-    } else {
-      console.log('Inventory table ready');
+      console.error('Error checking inventory table:', err);
+      return;
+    }
+
+    if (results.length > 0) {
+      console.log('Inventory table already exists, checking structure...');
       
+      // Cek struktur tabel yang ada
       db.query(`SHOW COLUMNS FROM inventory`, (err, columns) => {
         if (err) {
           console.error('Error checking inventory columns:', err);
@@ -687,17 +672,17 @@ const createInventoryTable = () => {
         const existingColumns = columns.map(col => col.Field);
         console.log('Existing columns:', existingColumns);
         
-        // Check if we need to migrate from old structure (item_id as INT primary key) to new structure
+        // Cek apakah perlu migrasi dari struktur lama
         const hasOldStructure = existingColumns.includes('item_id') && !existingColumns.includes('id');
         
-        // Check for duplicate tables from failed migrations
-        db.query(`SHOW TABLES LIKE 'inventory_new'`, (err, results) => {
+        // Cek tabel ganda dari migrasi gagal
+        db.query(`SHOW TABLES LIKE 'inventory_new'`, (err, newResults) => {
           if (err) {
             console.error('Error checking for inventory_new table:', err);
-          } else if (results.length > 0) {
+          } else if (newResults.length > 0) {
             console.log('Found inventory_new table from previous migration, cleaning up...');
             
-            // Check which table has data
+            // Cek mana yang punya data lebih banyak
             db.query(`SELECT COUNT(*) as count FROM inventory`, (err, inventoryCount) => {
               if (err) {
                 console.error('Error checking inventory count:', err);
@@ -714,7 +699,7 @@ const createInventoryTable = () => {
                     // Disable FK checks
                     db.query(`SET FOREIGN_KEY_CHECKS = 0`, () => {
                       if (newInvCount > invCount) {
-                        // inventory_new has more data, keep it
+                        // inventory_new punya lebih banyak data, pakai itu
                         console.log('Keeping inventory_new table (has more data)');
                         db.query(`DROP TABLE IF EXISTS inventory`, (err) => {
                           if (err) console.error('Error dropping old inventory table:', err);
@@ -726,13 +711,15 @@ const createInventoryTable = () => {
                                 console.log('Renamed inventory_new to inventory');
                                 db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {
                                   console.log('Inventory table cleanup completed');
+                                  // Lanjutkan dengan pengecekan kolom
+                                  checkAndAddColumns(existingColumns);
                                 });
                               }
                             });
                           }
                         });
                       } else {
-                        // inventory has equal or more data, drop inventory_new
+                        // inventory punya data sama atau lebih banyak, hapus inventory_new
                         console.log('Keeping inventory table (has equal or more data)');
                         db.query(`DROP TABLE IF EXISTS inventory_new`, (err) => {
                           if (err) console.error('Error dropping inventory_new table:', err);
@@ -740,6 +727,8 @@ const createInventoryTable = () => {
                             console.log('Dropped inventory_new table');
                             db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {
                               console.log('Inventory table cleanup completed');
+                              // Lanjutkan dengan pengecekan kolom
+                              checkAndAddColumns(existingColumns);
                             });
                           }
                         });
@@ -749,128 +738,184 @@ const createInventoryTable = () => {
                 });
               }
             });
-          }
-        });
-        
-        if (hasOldStructure) {
-          console.log('Migrating inventory table from old structure to new structure...');
-          
-          // Use temporary column approach to avoid auto-increment conflict
-          const migrationSteps = [
-            // Step 1: Disable foreign key checks
-            `SET FOREIGN_KEY_CHECKS = 0`,
-            
-            // Step 2: Add temporary column to store old item_id values
-            `ALTER TABLE inventory ADD COLUMN temp_item_id INT`,
-            
-            // Step 3: Copy item_id values to temp column
-            `UPDATE inventory SET temp_item_id = item_id`,
-            
-            // Step 4: Drop primary key from item_id
-            `ALTER TABLE inventory DROP PRIMARY KEY`,
-            
-            // Step 5: Remove auto_increment from item_id
-            `ALTER TABLE inventory MODIFY COLUMN item_id INT`,
-            
-            // Step 6: Add new id column as auto-increment primary key
-            `ALTER TABLE inventory ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST`,
-            
-            // Step 7: Convert item_id from INT to VARCHAR
-            `ALTER TABLE inventory MODIFY COLUMN item_id VARCHAR(20) UNIQUE`,
-            
-            // Step 8: Generate INV-XXX IDs using the temp values
-            `UPDATE inventory SET item_id = CONCAT('INV-', LPAD(temp_item_id, 3, '0'))`,
-            
-            // Step 9: Drop temporary column
-            `ALTER TABLE inventory DROP COLUMN temp_item_id`,
-            
-            // Step 10: Re-enable foreign key checks
-            `SET FOREIGN_KEY_CHECKS = 1`
-          ];
-          
-          let stepIndex = 0;
-          const executeNextStep = () => {
-            if (stepIndex >= migrationSteps.length) {
-              console.log('Inventory table migration completed successfully');
-              // Verify and fix any items that still don't have INV-XXX format
-              db.query(`UPDATE inventory SET item_id = CONCAT('INV-', LPAD(id, 3, '0')) WHERE item_id NOT LIKE 'INV-%'`, (err) => {
-                if (err) console.error('Error fixing item_id format:', err);
-                else console.log('Fixed item_id format for remaining items');
-              });
-              return;
-            }
-            
-            db.query(migrationSteps[stepIndex], (err) => {
-              if (err) {
-                console.error(`Migration step ${stepIndex + 1} failed:`, err);
-                // Re-enable FK checks even if migration fails
-                if (stepIndex !== 9) {
-                  db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {});
-                }
-              } else {
-                console.log(`Migration step ${stepIndex + 1} completed`);
-                stepIndex++;
-                executeNextStep();
-              }
-            });
-          };
-          
-          executeNextStep();
-        } else {
-          // Table already has new structure, but check if any items need INV-XXX format
-          db.query(`UPDATE inventory SET item_id = CONCAT('INV-', LPAD(id, 3, '0')) WHERE item_id NOT LIKE 'INV-%'`, (err) => {
-            if (err) console.error('Error fixing item_id format:', err);
-            else console.log('Fixed item_id format for items without INV-XXX format');
-          });
-        }
-        
-        const requiredColumns = ['id', 'item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at'];
-        
-        requiredColumns.forEach(col => {
-          if (!existingColumns.includes(col)) {
-            console.log(`Adding column: ${col}`);
-            let alterQuery = '';
-            
-            if (col === 'id') {
-              // Skip if we already handled migration above
-              return;
-            } else if (col === 'item_id') {
-              // Skip if we already handled migration above
-              return;
-            } else if (col === 'category_id') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN category_id INT, ADD FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL`;
-            } else if (col === 'uom_id') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN uom_id INT, ADD FOREIGN KEY (uom_id) REFERENCES uom(uom_id) ON DELETE SET NULL`;
-            } else if (col === 'stock_status') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN stock_status ENUM('in_stock', 'low_stock', 'out_of_stock') DEFAULT 'in_stock'`;
-            } else if (col === 'status') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN status ENUM('active', 'drafted') DEFAULT 'active'`;
-            } else if (col === 'stock_quantity') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN stock_quantity INT NOT NULL DEFAULT 0`;
-            } else if (col === 'minimum_stock') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN minimum_stock INT NOT NULL DEFAULT 0`;
-            } else if (col === 'attachment') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN attachment VARCHAR(255)`;
-            } else if (col === 'last_update') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`;
-            } else if (col === 'created_at') {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
-            } else {
-              alterQuery = `ALTER TABLE inventory ADD COLUMN ${col} VARCHAR(255)`;
-            }
-            
-            db.query(alterQuery, (alterErr) => {
-              if (alterErr) {
-                console.error(`Error adding column ${col}:`, alterErr);
-              } else {
-                console.log(`Column ${col} added successfully`);
-              }
-            });
+          } else {
+            // Tidak ada tabel ganda, lanjutkan dengan pengecekan kolom
+            checkAndAddColumns(existingColumns);
           }
         });
       });
+    } else {
+      // Tabel inventory tidak ada, buat baru tanpa foreign key dulu
+      console.log('Creating new inventory table without foreign keys first...');
+      const createTableQuery = `
+        CREATE TABLE inventory (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          item_id VARCHAR(20) UNIQUE,
+          item_name VARCHAR(255) NOT NULL,
+          category_id INT,
+          stock_quantity INT NOT NULL DEFAULT 0,
+          minimum_stock INT NOT NULL DEFAULT 0,
+          uom_id INT,
+          vendor VARCHAR(255),
+          stock_status ENUM('in_stock', 'low_stock', 'out_of_stock') DEFAULT 'in_stock',
+          status ENUM('active', 'drafted') DEFAULT 'active',
+          attachment VARCHAR(255),
+          last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+
+      db.query(createTableQuery, (err, result) => {
+        if (err) {
+          console.error('Error creating inventory table:', err);
+        } else {
+          console.log('Inventory table created without foreign keys');
+          
+          // Tambahkan foreign key setelah tabel dibuat
+          addForeignKeys();
+        }
+      });
     }
   });
+
+  function checkAndAddColumns(existingColumns) {
+    const requiredColumns = ['id', 'item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at'];
+    
+    requiredColumns.forEach(col => {
+      if (!existingColumns.includes(col)) {
+        console.log(`Adding column: ${col}`);
+        let alterQuery = '';
+        
+        if (col === 'id') {
+          return; // Skip, akan ditangani oleh migrasi
+        } else if (col === 'item_id') {
+          return; // Skip, akan ditangani oleh migrasi
+        } else if (col === 'category_id') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN category_id INT`;
+        } else if (col === 'uom_id') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN uom_id INT`;
+        } else if (col === 'stock_status') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN stock_status ENUM('in_stock', 'low_stock', 'out_of_stock') DEFAULT 'in_stock'`;
+        } else if (col === 'status') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN status ENUM('active', 'drafted') DEFAULT 'active'`;
+        } else if (col === 'stock_quantity') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN stock_quantity INT NOT NULL DEFAULT 0`;
+        } else if (col === 'minimum_stock') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN minimum_stock INT NOT NULL DEFAULT 0`;
+        } else if (col === 'attachment') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN attachment VARCHAR(255)`;
+        } else if (col === 'last_update') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`;
+        } else if (col === 'created_at') {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`;
+        } else {
+          alterQuery = `ALTER TABLE inventory ADD COLUMN ${col} VARCHAR(255)`;
+        }
+        
+        db.query(alterQuery, (alterErr) => {
+          if (alterErr) {
+            console.error(`Error adding column ${col}:`, alterErr);
+          } else {
+            console.log(`Column ${col} added successfully`);
+          }
+        });
+      }
+    });
+
+    // Cek apakah perlu migrasi dari struktur lama
+    const hasOldStructure = existingColumns.includes('item_id') && !existingColumns.includes('id');
+    
+    if (hasOldStructure) {
+      console.log('Migrating inventory table from old structure to new structure...');
+      
+      // Gunakan pendekatan kolom temp untuk menghindari konflik auto-increment
+      const migrationSteps = [
+        // Step 1: Disable foreign key checks
+        `SET FOREIGN_KEY_CHECKS = 0`,
+        
+        // Step 2: Tambah kolom temp untuk menyimpan nilai item_id lama
+        `ALTER TABLE inventory ADD COLUMN temp_item_id INT`,
+        
+        // Step 3: Copy nilai item_id ke kolom temp
+        `UPDATE inventory SET temp_item_id = item_id`,
+        
+        // Step 4: Drop primary key dari item_id
+        `ALTER TABLE inventory DROP PRIMARY KEY`,
+        
+        // Step 5: Hapus auto_increment dari item_id
+        `ALTER TABLE inventory MODIFY COLUMN item_id INT`,
+        
+        // Step 6: Tambah kolom id baru sebagai auto-increment primary key
+        `ALTER TABLE inventory ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST`,
+        
+        // Step 7: Convert item_id dari INT ke VARCHAR
+        `ALTER TABLE inventory MODIFY COLUMN item_id VARCHAR(20) UNIQUE`,
+        
+        // Step 8: Generate INV-XXX IDs menggunakan nilai temp
+        `UPDATE inventory SET item_id = CONCAT('INV-', LPAD(temp_item_id, 3, '0'))`,
+        
+        // Step 9: Drop kolom temp
+        `ALTER TABLE inventory DROP COLUMN temp_item_id`,
+        
+        // Step 10: Re-enable foreign key checks
+        `SET FOREIGN_KEY_CHECKS = 1`
+      ];
+      
+      let stepIndex = 0;
+      const executeNextStep = () => {
+        if (stepIndex >= migrationSteps.length) {
+          console.log('Inventory table migration completed successfully');
+          // Verifikasi dan perbaiki item yang masih tidak punya format INV-XXX
+          db.query(`UPDATE inventory SET item_id = CONCAT('INV-', LPAD(id, 3, '0')) WHERE item_id NOT LIKE 'INV-%'`, (err) => {
+            if (err) console.error('Error fixing item_id format:', err);
+            else console.log('Fixed item_id format for remaining items');
+          });
+          return;
+        }
+        
+        db.query(migrationSteps[stepIndex], (err) => {
+          if (err) {
+            console.error(`Migration step ${stepIndex + 1} failed:`, err);
+            // Re-enable FK checks bahkan jika migrasi gagal
+            if (stepIndex !== 9) {
+              db.query(`SET FOREIGN_KEY_CHECKS = 1`, () => {});
+            }
+          } else {
+            console.log(`Migration step ${stepIndex + 1} completed`);
+            stepIndex++;
+            executeNextStep();
+          }
+        });
+      };
+      
+      executeNextStep();
+    } else {
+      // Tabel sudah punya struktur baru, tapi cek apakah ada item yang butuh format INV-XXX
+      db.query(`UPDATE inventory SET item_id = CONCAT('INV-', LPAD(id, 3, '0')) WHERE item_id NOT LIKE 'INV-%'`, (err) => {
+        if (err) console.error('Error fixing item_id format:', err);
+        else console.log('Fixed item_id format for items without INV-XXX format');
+      });
+    }
+  }
+
+  function addForeignKeys() {
+    // Tambahkan foreign key setelah tabel dibuat
+    db.query(`ALTER TABLE inventory ADD FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL`, (err) => {
+      if (err) {
+        console.error('Error adding category_id foreign key:', err);
+      } else {
+        console.log('category_id foreign key added');
+      }
+    });
+
+    db.query(`ALTER TABLE inventory ADD FOREIGN KEY (uom_id) REFERENCES uom(uom_id) ON DELETE SET NULL`, (err) => {
+      if (err) {
+        console.error('Error adding uom_id foreign key:', err);
+      } else {
+        console.log('uom_id foreign key added');
+      }
+    });
+  }
 };
 
 const createInventoryIdTrigger = () => {
