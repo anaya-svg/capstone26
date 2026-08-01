@@ -373,14 +373,8 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
     }
 
     const item = itemResults[0];
-    const supplier = (item.vendor || '').trim();
-
-    if (!supplier) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot auto-create draft. Please set last vendor in Inventory item first.'
-      });
-    }
+    // Allow auto-draft even without vendor - user can set it later when converting draft to PR
+    const supplier = (item.vendor || '').trim() || 'TBD';
 
     const requestedQuantity = Number(suggested_quantity);
     if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
