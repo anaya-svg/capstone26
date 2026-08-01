@@ -326,7 +326,7 @@ router.get('/summary', (req, res) => {
       COUNT(CASE WHEN status = 'Waiting Approval' THEN 1 END) as waiting_approval,
       COUNT(CASE WHEN status = 'Approved' THEN 1 END) as approved,
       COUNT(CASE WHEN status = 'Rejected' OR (status = 'Draft' AND rejected_from_waiting = TRUE) OR (status = 'Rejected' AND deleted_from_received = TRUE) THEN 1 END) as rejected,
-      COUNT(CASE WHEN status = 'Received' AND deleted_from_received IS NULL THEN 1 END) as received
+      COUNT(CASE WHEN status = 'Received' THEN 1 END) as received
     FROM procurement_requests
   `;
 
