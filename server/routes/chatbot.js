@@ -620,7 +620,7 @@ router.post('/chat', async (req, res) => {
         });
       }),
       new Promise((resolve, reject) => {
-        db.query('SELECT item_id, item_name, stock_quantity, minimum_stock, uom, created_at FROM inventory', (err, results) => {
+        db.query('SELECT i.item_id, i.item_name, i.stock_quantity, i.minimum_stock, u.uom_name, i.created_at FROM inventory i LEFT JOIN uom u ON i.uom_id = u.uom_id', (err, results) => {
           if (err) reject(err);
           else resolve({ inventory: results });
         });
