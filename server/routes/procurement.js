@@ -325,6 +325,9 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
   const { item_id } = req.params;
   const { requested_by, suggested_quantity } = req.body || {};
 
+  // Use logged-in user's name if requested_by is not provided
+  const finalRequestedBy = requested_by || req.user?.name || 'System Auto Draft';
+
   if (!item_id) {
     return res.status(400).json({
       success: false,
@@ -422,7 +425,7 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
           [
             prId,
             baseId,
-            requested_by || 'System Auto Draft',
+            finalRequestedBy,
             supplier,
             null,
             null,
@@ -575,6 +578,9 @@ router.post('/', upload.single('attachment'), (req, res) => {
     status
   } = req.body;
 
+  // Use logged-in user's name if requested_by is not provided
+  const finalRequestedBy = requested_by || req.user?.name || 'Unknown User';
+
   let parsedItems = items;
   if (typeof items === 'string') {
     try {
@@ -660,7 +666,7 @@ router.post('/', upload.single('attachment'), (req, res) => {
     `;
 
     db.query(insertQuery, [
-      pr_id, base_id, requested_by, supplier, marketplace_link,
+      pr_id, base_id, finalRequestedBy, supplier, marketplace_link,
       attachment, status, total_cost
     ], (err, result) => {
       if (err) {
@@ -775,6 +781,9 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
     status
   } = req.body;
 
+  // Use logged-in user's name if requested_by is not provided
+  const finalRequestedBy = requested_by || req.user?.name || 'Unknown User';
+
   let parsedItems = items;
   if (typeof items === 'string') {
     try {
@@ -815,7 +824,7 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
   `;
 
   db.query(updateQuery, [
-    requested_by, supplier, marketplace_link, attachment, status || 'Waiting Approval', total_cost, pr_id
+    finalRequestedBy, supplier, marketplace_link, attachment, status || 'Waiting Approval', total_cost, pr_id
   ], (err, result) => {
     if (err) {
       return res.status(500).json({
