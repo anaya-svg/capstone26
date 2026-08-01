@@ -850,9 +850,8 @@ router.post('/', (req, res) => {
     // Simplified version without transactions for presentation demo
     // Generate event_id string
     const generateEventId = () => {
-      const timestamp = Date.now().toString(36).toUpperCase();
-      const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-      return `EVT-${timestamp}-${random}`;
+      const random = Math.random().toString(36).substring(2, 7).toUpperCase();
+      return `EVT-${random}`;
     };
     const event_id = generateEventId();
 
