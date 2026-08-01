@@ -23,7 +23,6 @@ const resetDatabase = async () => {
       'assets',
       'inventory',
       'categories',
-      'booth_setups',
       'calendar_activities',
       'promotions'
     ];
@@ -42,20 +41,6 @@ const resetDatabase = async () => {
       await db.promise().query(`ALTER TABLE ${table} AUTO_INCREMENT = 1`);
     }
     console.log('Auto-increment counters reset');
-
-    // Insert default booth setups
-    await db.promise().query(`
-      INSERT INTO booth_setups (booth_setup_name) VALUES
-      ('Photobooth Standard'),
-      ('Photobooth Premium'),
-      ('360 Booth'),
-      ('Mirror Booth'),
-      ('GIF Booth'),
-      ('Video Booth'),
-      ('Green Screen Booth'),
-      ('Open Air Booth')
-    `);
-    console.log('Default booth setups inserted');
 
     // Insert default categories
     await db.promise().query(`
