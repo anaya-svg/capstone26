@@ -101,7 +101,7 @@ function Events() {
         return
       }
 
-      const headers = ['Event ID', 'Event Name', 'Start Date', 'End Date', 'Location', 'Customer', 'Package', 'Status', 'Revenue']
+      const headers = ['ID', 'Event Name', 'Start Date', 'End Date', 'Location', 'Customer', 'Package', 'Status', 'Revenue']
       const rows = data.data.map((event) => [
         event.event_id,
         event.event_name,
@@ -1369,7 +1369,7 @@ function Events() {
               <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-slate-700 sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Event ID</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">ID</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Event Name</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Start - End Date</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Location</th>
@@ -2459,7 +2459,7 @@ function Events() {
               <div className="space-y-6 pt-2">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500 uppercase text-[10px] font-bold">Event ID</p>
+                    <p className="text-sm text-gray-500 uppercase text-[10px] font-bold">ID</p>
                     <p className="font-medium">{selectedEvent.event_id}</p>
                   </div>
                   <div>

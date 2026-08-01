@@ -721,7 +721,7 @@ function Assets() {
         return
       }
 
-      const headers = ['Asset ID', 'Name', 'Category', 'Status', 'Location', 'Condition', 'Quantity', 'Created At']
+      const headers = ['ID', 'Name', 'Category', 'Status', 'Location', 'Condition', 'Quantity', 'Created At']
       const rows = data.data.map((asset) => [
         asset.asset_id,
         asset.name,
@@ -1006,7 +1006,7 @@ function Assets() {
             <table className="min-w-full">
               <thead className="bg-gray-50 dark:bg-slate-700 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Asset ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Category</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
@@ -1249,7 +1249,7 @@ function Assets() {
               ) : null}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Asset ID:</p>
+                  <p className="text-sm font-medium text-gray-700">ID:</p>
                   <p className="text-sm text-gray-900">{selectedAsset.asset_id}</p>
                 </div>
                 <div>
