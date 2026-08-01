@@ -44,6 +44,8 @@ router.get('/', (req, res) => {
   const limitNum = parseInt(limit);
   const offset = (pageNum - 1) * limitNum;
 
+  console.log('Fetching inventory with params:', { search, status, page, limit });
+
   let query = `
     SELECT 
       i.item_id, 
@@ -136,6 +138,7 @@ router.get('/', (req, res) => {
     }
 
     const total = countResult[0].total;
+    console.log('Total inventory count:', total);
 
     db.query(query, params, (err, results) => {
       if (err) {
@@ -145,6 +148,9 @@ router.get('/', (req, res) => {
           message: 'Error fetching inventory'
         });
       }
+
+      console.log('Inventory results count:', results.length);
+      console.log('Sample inventory data:', results.length > 0 ? results[0] : 'No results');
 
       res.json({
         success: true,
