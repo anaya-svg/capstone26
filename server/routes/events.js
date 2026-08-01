@@ -848,6 +848,14 @@ router.post('/', (req, res) => {
 
   const proceedCreate = () => {
     // Simplified version without transactions for presentation demo
+    // Generate event_id string
+    const generateEventId = () => {
+      const timestamp = Date.now().toString(36).toUpperCase();
+      const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+      return `EVT-${timestamp}-${random}`;
+    };
+    const event_id = generateEventId();
+
     const inventoryUpdates = [];
     if (backdrop_item_id && backdrop_item_id !== -1 && backdrop_quantity > 0) {
       inventoryUpdates.push(new Promise((resolve, reject) => {
@@ -868,16 +876,16 @@ router.post('/', (req, res) => {
       .then(() => {
         const eventQuery = `
           INSERT INTO events (
-            event_name, start_date, end_date, location, customer, customer_id, 
+            event_id, event_name, start_date, end_date, location, customer, customer_id, 
             package_name, extra_hours, backdrop_item_id, backdrop_quantity, 
             guestbook_album, gif_boomerang, print_item_id, print_quantity, 
             expected_revenue, status, booth_setup, created_by, promo_id, discount_amount
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         db.query(eventQuery, [
-          event_name, start_date, end_date, location, customer, customer_id || null,
+          event_id, event_name, start_date, end_date, location, customer, customer_id || null,
           package_name, extra_hours || 0, backdrop_item_id, backdrop_quantity || 0,
           guestbook_album || false, gif_boomerang || false, print_item_id, print_quantity || 0,
           expected_revenue || 0, autoStatus, booth_setup || null, created_by || 'N/A',
@@ -888,7 +896,7 @@ router.post('/', (req, res) => {
             return res.status(500).json({ success: false, message: 'Error creating event' });
           }
 
-          const actual_event_id = result.insertId;
+          console.log('Event created with ID:', event_id);
 
           if (customer_id && expected_revenue) {
             db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [expected_revenue, customer_id]);
@@ -898,10 +906,20 @@ router.post('/', (req, res) => {
             const assetPromises = assets.map(asset => {
               return new Promise((resolve, reject) => {
                 db.query('SELECT location FROM assets WHERE asset_id = ?', [asset.asset_id], (err, locResults) => {
+                  if (err) {
+                    console.error('Error fetching asset location:', err);
+                    return reject(err);
+                  }
                   const originalLocation = locResults.length > 0 ? locResults[0].location : null;
+                  console.log('Adding asset to event:', { event_id: event_id, asset_id: asset.asset_id, quantity: asset.quantity, original_location: originalLocation });
                   db.query('INSERT INTO event_assets (event_id, asset_id, quantity, original_location) VALUES (?, ?, ?, ?)', 
-                    [actual_event_id, asset.asset_id, asset.quantity, originalLocation], (err) => {
-                      if (err) reject(err); else resolve();
+                    [event_id, asset.asset_id, asset.quantity, originalLocation], (err) => {
+                      if (err) {
+                        console.error('Error inserting event asset:', err);
+                        reject(err);
+                      } else {
+                        resolve();
+                      }
                     });
                 });
               });
@@ -910,17 +928,17 @@ router.post('/', (req, res) => {
             Promise.all(assetPromises)
               .then(() => {
                 if (autoStatus === 'in_progress') {
-                  updateAssetLocations(actual_event_id, 'Off Site', db);
-                  updateAssetStatusByEventStatus(actual_event_id, 'in_progress', db);
+                  updateAssetLocations(event_id, 'Off Site', db);
+                  updateAssetStatusByEventStatus(event_id, 'in_progress', db);
                 }
-                res.json({ success: true, message: 'Event created successfully', event_id: actual_event_id });
+                res.json({ success: true, message: 'Event created successfully', event_id: event_id });
               })
               .catch(err => {
                 console.error('Error adding assets:', err);
-                res.status(500).json({ success: false, message: 'Asset error' });
+                res.status(500).json({ success: false, message: 'Asset error: ' + err.message });
               });
           } else {
-            res.json({ success: true, message: 'Event created successfully', event_id: actual_event_id });
+            res.json({ success: true, message: 'Event created successfully', event_id: event_id });
           }
         });
       })
