@@ -111,6 +111,11 @@ router.get('/', (req, res) => {
       conditions.push('(pr.status = ? OR (pr.status = ? AND pr.rejected_from_waiting = TRUE) OR (pr.status = ? AND pr.deleted_from_received = TRUE))');
       params.push('Rejected', 'Draft', 'Rejected');
       countParams.push('Rejected', 'Draft', 'Rejected');
+    } else if (status === 'Draft') {
+      // Filter for Draft only (exclude rejected drafts)
+      conditions.push('(pr.status = ? AND pr.rejected_from_waiting IS NULL)');
+      params.push('Draft');
+      countParams.push('Draft');
     } else {
       conditions.push('pr.status = ?');
       params.push(status);
@@ -252,6 +257,18 @@ router.get('/export', (req, res) => {
       countQuery += condition;
       params.push('Rejected', 'Draft', 'Rejected');
       countParams.push('Rejected', 'Draft', 'Rejected');
+    } else if (statusList.includes('Draft')) {
+      // Handle Draft filter to exclude rejected drafts
+      const otherStatuses = statusList.filter(s => s !== 'Draft');
+      if (otherStatuses.length > 0) {
+        appendInFilter('pr.status', otherStatuses.join(','));
+      }
+      // Add special condition for Draft
+      const condition = ' AND (pr.status = ? AND pr.rejected_from_waiting IS NULL)';
+      query += condition;
+      countQuery += condition;
+      params.push('Draft');
+      countParams.push('Draft');
     } else {
       appendInFilter('pr.status', status);
     }
