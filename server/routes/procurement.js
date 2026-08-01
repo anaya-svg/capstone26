@@ -106,9 +106,16 @@ router.get('/', (req, res) => {
   const conditions = [];
 
   if (status) {
-    conditions.push('pr.status = ?');
-    params.push(status);
-    countParams.push(status);
+    if (status === 'Rejected') {
+      // Filter for Rejected PR, Rejected PO, and Deleted GR
+      conditions.push('(pr.status = ? OR (pr.status = ? AND pr.rejected_from_waiting = TRUE) OR (pr.status = ? AND pr.deleted_from_received = TRUE))');
+      params.push('Rejected', 'Draft', 'Rejected');
+      countParams.push('Rejected', 'Draft', 'Rejected');
+    } else {
+      conditions.push('pr.status = ?');
+      params.push(status);
+      countParams.push(status);
+    }
   }
 
   if (date) {
@@ -231,7 +238,24 @@ router.get('/export', (req, res) => {
     countParams.push(...list);
   };
 
-  if (status) appendInFilter('pr.status', status.split(','));
+  if (status) {
+    const statusList = status.split(',');
+    if (statusList.includes('Rejected')) {
+      // Handle Rejected filter to include Rejected PR, Rejected PO, and Deleted GR
+      const otherStatuses = statusList.filter(s => s !== 'Rejected');
+      if (otherStatuses.length > 0) {
+        appendInFilter('pr.status', otherStatuses.join(','));
+      }
+      // Add special condition for Rejected
+      const condition = ' AND (pr.status = ? OR (pr.status = ? AND pr.rejected_from_waiting = TRUE) OR (pr.status = ? AND pr.deleted_from_received = TRUE))';
+      query += condition;
+      countQuery += condition;
+      params.push('Rejected', 'Draft', 'Rejected');
+      countParams.push('Rejected', 'Draft', 'Rejected');
+    } else {
+      appendInFilter('pr.status', status);
+    }
+  }
 
   if (createdAt) {
     const condition = ' AND DATE(pr.created_at) = ?';
@@ -298,11 +322,11 @@ router.get('/summary', (req, res) => {
 
   const query = `
     SELECT
-      COUNT(CASE WHEN status = 'Draft' THEN 1 END) as draft,
+      COUNT(CASE WHEN status = 'Draft' AND rejected_from_waiting IS NULL THEN 1 END) as draft,
       COUNT(CASE WHEN status = 'Waiting Approval' THEN 1 END) as waiting_approval,
       COUNT(CASE WHEN status = 'Approved' THEN 1 END) as approved,
-      COUNT(CASE WHEN status = 'Rejected' THEN 1 END) as rejected,
-      COUNT(CASE WHEN status = 'Received' THEN 1 END) as received
+      COUNT(CASE WHEN status = 'Rejected' OR (status = 'Draft' AND rejected_from_waiting = TRUE) OR (status = 'Rejected' AND deleted_from_received = TRUE) THEN 1 END) as rejected,
+      COUNT(CASE WHEN status = 'Received' AND deleted_from_received IS NULL THEN 1 END) as received
     FROM procurement_requests
   `;
 
