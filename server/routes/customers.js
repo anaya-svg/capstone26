@@ -236,44 +236,70 @@ router.post('/:customer_id/assign-in-studio', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
 
-  const query = `
-    UPDATE customers
-    SET is_in_studio = TRUE,
-        in_studio_date_added = CURRENT_TIMESTAMP,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE customer_id = ?
-  `;
-
-  db.query(query, [customer_id], (err, result) => {
+  // Check if customer is already assigned to In Studio
+  const checkQuery = 'SELECT is_in_studio FROM customers WHERE customer_id = ?';
+  db.query(checkQuery, [customer_id], (err, results) => {
     if (err) {
-      console.error('Error assigning customer to In Studio:', err);
+      console.error('Error checking customer assignment:', err);
       return res.status(500).json({
         success: false,
-        message: 'Error assigning customer to In Studio'
+        message: 'Error checking customer assignment'
       });
     }
 
-    if (result.affectedRows === 0) {
+    if (results.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Customer not found'
       });
     }
 
-    const selectQuery = 'SELECT * FROM customers WHERE customer_id = ?';
-    db.query(selectQuery, [customer_id], (err, results) => {
+    if (results[0].is_in_studio) {
+      return res.status(400).json({
+        success: false,
+        message: 'This customer is already assigned to In Studio'
+      });
+    }
+
+    const query = `
+      UPDATE customers
+      SET is_in_studio = TRUE,
+          in_studio_date_added = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE customer_id = ?
+    `;
+
+    db.query(query, [customer_id], (err, result) => {
       if (err) {
-        console.error('Error fetching updated customer:', err);
+        console.error('Error assigning customer to In Studio:', err);
         return res.status(500).json({
           success: false,
           message: 'Error assigning customer to In Studio'
         });
       }
 
-      res.json({
-        success: true,
-        message: 'Customer assigned to In Studio successfully',
-        data: results[0]
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Customer not found'
+        });
+      }
+
+      const selectQuery = 'SELECT * FROM customers WHERE customer_id = ?';
+      db.query(selectQuery, [customer_id], (err, results) => {
+        if (err) {
+          console.error('Error fetching updated customer:', err);
+          return res.status(500).json({
+            success: false,
+            message: 'Error assigning customer to In Studio'
+          });
+        }
+
+        res.json({
+          success: true,
+          message: 'Customer assigned to In Studio successfully',
+          data: results[0]
+        });
       });
     });
   });
@@ -283,44 +309,70 @@ router.post('/:customer_id/assign-off-site', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
 
-  const query = `
-    UPDATE customers
-    SET is_off_site = TRUE,
-        off_site_date_added = CURRENT_TIMESTAMP,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE customer_id = ?
-  `;
-
-  db.query(query, [customer_id], (err, result) => {
+  // Check if customer is already assigned to Off Site
+  const checkQuery = 'SELECT is_off_site FROM customers WHERE customer_id = ?';
+  db.query(checkQuery, [customer_id], (err, results) => {
     if (err) {
-      console.error('Error assigning customer to Off Site:', err);
+      console.error('Error checking customer assignment:', err);
       return res.status(500).json({
         success: false,
-        message: 'Error assigning customer to Off Site'
+        message: 'Error checking customer assignment'
       });
     }
 
-    if (result.affectedRows === 0) {
+    if (results.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Customer not found'
       });
     }
 
-    const selectQuery = 'SELECT * FROM customers WHERE customer_id = ?';
-    db.query(selectQuery, [customer_id], (err, results) => {
+    if (results[0].is_off_site) {
+      return res.status(400).json({
+        success: false,
+        message: 'This customer is already assigned to Off Site'
+      });
+    }
+
+    const query = `
+      UPDATE customers
+      SET is_off_site = TRUE,
+          off_site_date_added = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE customer_id = ?
+    `;
+
+    db.query(query, [customer_id], (err, result) => {
       if (err) {
-        console.error('Error fetching updated customer:', err);
+        console.error('Error assigning customer to Off Site:', err);
         return res.status(500).json({
           success: false,
           message: 'Error assigning customer to Off Site'
         });
       }
 
-      res.json({
-        success: true,
-        message: 'Customer assigned to Off Site successfully',
-        data: results[0]
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Customer not found'
+        });
+      }
+
+      const selectQuery = 'SELECT * FROM customers WHERE customer_id = ?';
+      db.query(selectQuery, [customer_id], (err, results) => {
+        if (err) {
+          console.error('Error fetching updated customer:', err);
+          return res.status(500).json({
+            success: false,
+            message: 'Error assigning customer to Off Site'
+          });
+        }
+
+        res.json({
+          success: true,
+          message: 'Customer assigned to Off Site successfully',
+          data: results[0]
+        });
       });
     });
   });
