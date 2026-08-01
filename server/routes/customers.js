@@ -535,47 +535,62 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
     const promoDiscount = Number(discount_amount) || 0;
     const spending = Math.max(0, subtotal - promoDiscount);
 
-    db.beginTransaction(err => {
-      if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
+    // Simplified version without transactions for presentation demo
+    if (oldVisit.paper_type_item_id && oldVisit.paper_quantity > 0) {
+      db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldVisit.paper_quantity, oldVisit.paper_type_item_id], (err) => {
+        if (err) {
+          console.error('Error restoring inventory:', err);
+          return res.status(500).json({ success: false, message: 'Error restoring inventory' });
+        }
+        processNewInventory();
+      });
+    } else {
+      processNewInventory();
+    }
 
-      if (oldVisit.paper_type_item_id && oldVisit.paper_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [oldVisit.paper_quantity, oldVisit.paper_type_item_id]);
-      }
-
+    function processNewInventory() {
       if (paper_type_item_id && paper_quantity > 0) {
         db.query('SELECT stock_quantity FROM inventory WHERE item_id = ?', [paper_type_item_id], (err, inv) => {
           if (err || inv.length === 0 || inv[0].stock_quantity < paper_quantity) {
-            return db.rollback(() => res.status(400).json({ success: false, message: 'Quantity insufficient' }));
+            return res.status(400).json({ success: false, message: 'Quantity insufficient' });
           }
-          db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id]);
-          updateVisit();
+          db.query('UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE item_id = ?', [paper_quantity, paper_type_item_id], (err) => {
+            if (err) {
+              console.error('Error updating inventory:', err);
+              return res.status(500).json({ success: false, message: 'Error updating inventory' });
+            }
+            updateVisit();
+          });
         });
       } else {
         updateVisit();
       }
+    }
 
-      function updateVisit() {
-        const updateQuery = `
-          UPDATE customer_visits 
-          SET visit_date = ?, spending = ?, package_name = ?, person_quantity = ?, duration = ?, 
-              paper_type_item_id = ?, paper_quantity = ?, with_photographer = ?, promo_id = ?, discount_amount = ?
-          WHERE visit_id = ?
-        `;
-        db.query(updateQuery, [visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount, visit_id], (err) => {
-          if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Update error' }));
+    function updateVisit() {
+      const updateQuery = `
+        UPDATE customer_visits 
+        SET visit_date = ?, spending = ?, package_name = ?, person_quantity = ?, duration = ?, 
+            paper_type_item_id = ?, paper_quantity = ?, with_photographer = ?, promo_id = ?, discount_amount = ?
+        WHERE visit_id = ?
+      `;
+      db.query(updateQuery, [visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount, visit_id], (err) => {
+        if (err) {
+          console.error('Error updating visit:', err);
+          return res.status(500).json({ success: false, message: 'Error updating visit' });
+        }
 
-          const diff = spending - oldVisit.spending;
-          db.query('UPDATE customers SET total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [diff, visit_date, customer_id], (err) => {
-            if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Customer update error' }));
+        const diff = spending - oldVisit.spending;
+        db.query('UPDATE customers SET total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [diff, visit_date, customer_id], (err) => {
+          if (err) {
+            console.error('Error updating customer totals:', err);
+            return res.status(500).json({ success: false, message: 'Error updating customer totals' });
+          }
 
-            db.commit(err => {
-              if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
-              res.json({ success: true, message: 'Visit updated successfully' });
-            });
-          });
+          res.json({ success: true, message: 'Visit updated successfully' });
         });
-      }
-    });
+      });
+    }
   });
 });
 
@@ -589,26 +604,36 @@ router.delete('/:customer_id/visits/:visit_id', (req, res) => {
 
     const visit = results[0];
 
-    db.beginTransaction(err => {
-      if (err) return res.status(500).json({ success: false, message: 'Transaction error' });
+    // Simplified version without transactions for presentation demo
+    if (visit.paper_type_item_id && visit.paper_quantity > 0) {
+      db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [visit.paper_quantity, visit.paper_type_item_id], (err) => {
+        if (err) {
+          console.error('Error updating inventory:', err);
+          return res.status(500).json({ success: false, message: 'Error updating inventory' });
+        }
+        deleteVisit();
+      });
+    } else {
+      deleteVisit();
+    }
 
-      if (visit.paper_type_item_id && visit.paper_quantity > 0) {
-        db.query('UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE item_id = ?', [visit.paper_quantity, visit.paper_type_item_id]);
-      }
-
+    function deleteVisit() {
       db.query('DELETE FROM customer_visits WHERE visit_id = ?', [visit_id], (err) => {
-        if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Delete error' }));
+        if (err) {
+          console.error('Error deleting visit:', err);
+          return res.status(500).json({ success: false, message: 'Error deleting visit' });
+        }
 
         db.query('UPDATE customers SET total_visits = total_visits - 1, total_spending = total_spending - ? WHERE customer_id = ?', [visit.spending, customer_id], (err) => {
-          if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Customer update error' }));
+          if (err) {
+            console.error('Error updating customer totals:', err);
+            return res.status(500).json({ success: false, message: 'Error updating customer totals' });
+          }
 
-          db.commit(err => {
-            if (err) return db.rollback(() => res.status(500).json({ success: false, message: 'Commit error' }));
-            res.json({ success: true, message: 'Visit deleted successfully' });
-          });
+          res.json({ success: true, message: 'Visit deleted successfully' });
         });
       });
-    });
+    }
   });
 });
 
