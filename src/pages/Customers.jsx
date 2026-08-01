@@ -103,6 +103,7 @@ function Customers() {
     setSelectedAssignCustomer(null)
     setAssignCustomerSearch('')
     setAssignCustomerResults([])
+    setAssignError('')
   }
 
   const closeAddOffSiteModal = () => {
@@ -110,6 +111,7 @@ function Customers() {
     setSelectedAssignCustomer(null)
     setAssignCustomerSearch('')
     setAssignCustomerResults([])
+    setAssignError('')
   }
 
   const closeManageVisitsModal = () => {
@@ -232,6 +234,7 @@ function Customers() {
   const [assignCustomerSearch, setAssignCustomerSearch] = useState('')
   const [assignCustomerResults, setAssignCustomerResults] = useState([])
   const [selectedAssignCustomer, setSelectedAssignCustomer] = useState(null)
+  const [assignError, setAssignError] = useState('')
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -1026,13 +1029,15 @@ function Customers() {
     setSelectedAssignCustomer(customer)
     setAssignCustomerSearch(customer.name)
     setAssignCustomerResults([])
+    setAssignError('')
   }
 
   const handleAssignToInStudio = async () => {
     if (!selectedAssignCustomer) {
-      showSystemNotice('error', 'Please select a customer')
+      setAssignError('Please select a customer')
       return
     }
+    setAssignError('')
     try {
       const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/${selectedAssignCustomer.customer_id}/assign-in-studio`, {
@@ -1045,23 +1050,25 @@ function Customers() {
         setSelectedAssignCustomer(null)
         setAssignCustomerSearch('')
         setAssignCustomerResults([])
+        setAssignError('')
         fetchSummary()
         fetchCustomers()
         showSystemNotice('success', 'Customer assigned to In Studio successfully')
       } else {
-        showSystemNotice('error', 'Error assigning customer: ' + data.message)
+        setAssignError(data.message)
       }
     } catch (error) {
       console.error('Error assigning customer to In Studio:', error)
-      showSystemNotice('error', 'Error assigning customer to In Studio')
+      setAssignError('Error assigning customer to In Studio')
     }
   }
 
   const handleAssignToOffSite = async () => {
     if (!selectedAssignCustomer) {
-      showSystemNotice('error', 'Please select a customer')
+      setAssignError('Please select a customer')
       return
     }
+    setAssignError('')
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/${selectedAssignCustomer.customer_id}/assign-off-site`, {
         method: 'POST'
@@ -1072,15 +1079,16 @@ function Customers() {
         setSelectedAssignCustomer(null)
         setAssignCustomerSearch('')
         setAssignCustomerResults([])
+        setAssignError('')
         fetchSummary()
         fetchCustomers()
         showSystemNotice('success', 'Customer assigned to Off Site successfully')
       } else {
-        showSystemNotice('error', 'Error assigning customer: ' + data.message)
+        setAssignError(data.message)
       }
     } catch (error) {
       console.error('Error assigning customer to Off Site:', error)
-      showSystemNotice('error', 'Error assigning customer to Off Site')
+      setAssignError('Error assigning customer to Off Site')
     }
   }
 
@@ -2305,6 +2313,11 @@ function Customers() {
                   </div>
                 )}
               </div>
+              {assignError && (
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">{assignError}</p>
+                </div>
+              )}
               {selectedAssignCustomer && (
                 <>
                   <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
@@ -2385,6 +2398,11 @@ function Customers() {
                   </div>
                 )}
               </div>
+              {assignError && (
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">{assignError}</p>
+                </div>
+              )}
               {selectedAssignCustomer && (
                 <>
                   <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
