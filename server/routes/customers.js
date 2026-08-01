@@ -405,16 +405,15 @@ router.post('/:customer_id/visits', (req, res) => {
     if (person_quantity > 1) spending += (person_quantity - 1) * 20000;
     if (duration > 7) spending += ((duration - 7) / 7) * 10000;
     if (paper_quantity > 1) spending += (paper_quantity - 1) * 5000;
-  } else if (package_name === 'Snap Photobox Premium') {
+  } else if (package_name === 'Snap Self Photo') {
+    spending = 60000;
+    if (person_quantity > 2) spending += (person_quantity - 2) * 20000;
+    if (duration > 15) spending += ((duration - 15) / 15) * 12000;
+    if (paper_quantity > 2) spending += (paper_quantity - 2) * 5000;
+  } else if (package_name === 'Snap Pas Photo') {
     spending = 35000;
-    if (person_quantity > 1) spending += (person_quantity - 1) * 25000;
-    if (duration > 7) spending += ((duration - 7) / 7) * 15000;
-    if (paper_quantity > 1) spending += (paper_quantity - 1) * 8000;
-  } else if (package_name === 'Snap Photobox Deluxe') {
-    spending = 50000;
-    if (person_quantity > 1) spending += (person_quantity - 1) * 30000;
-    if (duration > 7) spending += ((duration - 7) / 7) * 20000;
-    if (paper_quantity > 1) spending += (paper_quantity - 1) * 10000;
+    if (duration > 7) spending += ((duration - 7) / 7) * 12000;
+    if (paper_quantity > 1) spending += (paper_quantity - 1) * 5000;
   } else {
     spending = 25000;
   }
@@ -527,7 +526,10 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
       subtotal = 35000;
       if (duration > 7) subtotal += ((duration - 7) / 7) * 12000;
       if (paper_quantity > 1) subtotal += (paper_quantity - 1) * 5000;
-      if (with_photographer) subtotal += 50000;
+    }
+
+    if (with_photographer) {
+      subtotal += 50000;
     }
 
     const promoDiscount = Number(discount_amount) || 0;
