@@ -28,6 +28,7 @@ function Inventory() {
   const [selectedAutoDraftItem, setSelectedAutoDraftItem] = useState(null)
   const [autoDraftQtyInput, setAutoDraftQtyInput] = useState('')
   const [autoDraftNotice, setAutoDraftNotice] = useState({ type: '', message: '' })
+  const [autoDraftError, setAutoDraftError] = useState('')
   const [uoms, setUoms] = useState([])
 
   const [showAddModal, setShowAddModal] = useState(false)
@@ -302,14 +303,17 @@ function Inventory() {
     setShowAutoDraftModal(false)
     setSelectedAutoDraftItem(null)
     setAutoDraftQtyInput('')
+    setAutoDraftError('')
   }
 
   const handleCreateAutoDraft = async () => {
     if (!selectedAutoDraftItem?.item_id) return
 
+    setAutoDraftError('')
+
     const requestedQty = Number(autoDraftQtyInput)
     if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
-      showSystemNotice('error', 'Quantity harus diisi angka valid lebih dari 0.')
+      setAutoDraftError('Quantity harus diisi angka valid lebih dari 0.')
       return
     }
 
@@ -332,18 +336,16 @@ function Inventory() {
       const data = await response.json()
 
       if (!response.ok || !data.success) {
-        showSystemNotice('error', data.message || 'Gagal membuat draft procurement otomatis.')
+        setAutoDraftError(data.message || 'Gagal membuat draft procurement otomatis.')
         return
       }
 
       showSystemNotice('success', `Draft procurement ${data.data?.pr_id} berhasil dibuat untuk ${data.data?.item_name}.`)
       closeAutoDraftModal()
-      fetchSummary()
-      fetchInventory()
       fetchLowStockItems()
     } catch (error) {
       console.error('Error creating auto draft procurement:', error)
-      showSystemNotice('error', 'Terjadi error saat membuat draft procurement otomatis.')
+      setAutoDraftError('Terjadi error saat membuat draft procurement otomatis.')
     } finally {
       setAutoDraftLoadingItemId(null)
     }
@@ -2332,9 +2334,15 @@ function Inventory() {
                 type="number"
                 min="1"
                 value={autoDraftQtyInput}
-                onChange={(e) => setAutoDraftQtyInput(e.target.value)}
+                onChange={(e) => {
+                  setAutoDraftQtyInput(e.target.value)
+                  setAutoDraftError('')
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
+              {autoDraftError && (
+                <p className="text-red-600 text-sm mt-2">{autoDraftError}</p>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <button

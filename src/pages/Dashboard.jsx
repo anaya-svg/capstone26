@@ -38,6 +38,7 @@ function Dashboard() {
   const [selectedAutoDraftItem, setSelectedAutoDraftItem] = useState(null)
   const [autoDraftQtyInput, setAutoDraftQtyInput] = useState('')
   const [autoDraftNotice, setAutoDraftNotice] = useState({ type: '', message: '' })
+  const [autoDraftError, setAutoDraftError] = useState('')
   const [revenueTrend, setRevenueTrend] = useState([])
   const [upcomingEvents, setUpcomingEvents] = useState([])
   const [recentProcurement, setRecentProcurement] = useState([])
@@ -154,6 +155,7 @@ function Dashboard() {
     setShowAutoDraftModal(false)
     setSelectedAutoDraftItem(null)
     setAutoDraftQtyInput('')
+    setAutoDraftError('')
   }
 
   const toggleItemEvents = (itemId) => {
@@ -166,12 +168,11 @@ function Dashboard() {
   const handleCreateAutoDraft = async () => {
     if (!selectedAutoDraftItem?.item_id) return
 
+    setAutoDraftError('')
+
     const requestedQty = Number(autoDraftQtyInput)
     if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
-      setAutoDraftNotice({
-        type: 'error',
-        message: 'Quantity harus diisi angka valid lebih dari 0.'
-      })
+      setAutoDraftError('Quantity harus diisi angka valid lebih dari 0.')
       return
     }
 
@@ -191,26 +192,19 @@ function Dashboard() {
 
       const data = await response.json()
 
-      if (!response.ok || !data.success) {
+      if (data.success) {
         setAutoDraftNotice({
-          type: 'error',
-          message: data.message || 'Gagal membuat draft procurement otomatis.'
+          type: 'success',
+          message: `Draft procurement ${data.data?.pr_id} berhasil dibuat untuk ${data.data?.item_name}.`
         })
-        return
+        closeAutoDraftModal()
+        fetchDashboardData()
+      } else {
+        setAutoDraftError(data.message || 'Gagal membuat draft procurement.')
       }
-
-      setAutoDraftNotice({
-        type: 'success',
-        message: `Draft procurement ${data.data?.pr_id} berhasil dibuat untuk ${data.data?.item_name}.`
-      })
-      closeAutoDraftModal()
-      fetchDashboardData()
     } catch (error) {
       console.error('Error creating auto draft procurement:', error)
-      setAutoDraftNotice({
-        type: 'error',
-        message: 'Terjadi error saat membuat draft procurement otomatis.'
-      })
+      setAutoDraftError('Terjadi error saat membuat draft procurement otomatis.')
     } finally {
       setAutoDraftLoadingItemId(null)
     }
@@ -856,9 +850,15 @@ function Dashboard() {
                 type="number"
                 min="1"
                 value={autoDraftQtyInput}
-                onChange={(e) => setAutoDraftQtyInput(e.target.value)}
+                onChange={(e) => {
+                  setAutoDraftQtyInput(e.target.value)
+                  setAutoDraftError('')
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
+              {autoDraftError && (
+                <p className="text-red-600 text-sm mt-2">{autoDraftError}</p>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <button

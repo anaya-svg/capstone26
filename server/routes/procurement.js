@@ -366,7 +366,6 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
   const { item_id } = req.params;
   const { requested_by, suggested_quantity } = req.body || {};
 
-  // Use logged-in user's name if requested_by is not provided
   const finalRequestedBy = requested_by || req.user?.name || 'System Auto Draft';
 
   if (!item_id) {
@@ -376,7 +375,6 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
     });
   }
 
-  // Convert display_id to numeric item_id if needed
   const getItemIdQuery = `
     SELECT item_id, display_id
     FROM inventory
@@ -402,7 +400,6 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
 
     const numericItemId = idResults[0].item_id;
 
-    // Check if there's already a Draft PR for this item
     const checkExistingDraftQuery = `
       SELECT pr.pr_id
       FROM procurement_requests pr
@@ -414,185 +411,185 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
     `;
 
     db.query(checkExistingDraftQuery, [numericItemId], (checkErr, checkResults) => {
-    if (checkErr) {
-      console.error('Error checking existing draft:', checkErr);
-      return res.status(500).json({
-        success: false,
-        message: 'Error checking existing draft'
-      });
-    }
-
-    if (checkResults.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'This item has already been auto-drafted. Please check the Draft section in Procurement.'
-      });
-    }
-
-    const getInventoryItemQuery = `
-    SELECT
-      i.item_id,
-      i.item_name,
-      i.stock_quantity,
-      i.minimum_stock,
-      i.vendor,
-      (
-        SELECT pri.cost
-        FROM procurement_request_items pri
-        JOIN procurement_requests pr ON pr.pr_id = pri.pr_id
-        WHERE pri.item_id = i.item_id
-          AND pri.item_classification = 'Supplies'
-          AND pr.status = 'Received'
-          AND COALESCE(pr.deleted_from_received, 0) = 0
-        ORDER BY pr.created_at DESC, pr.pr_id DESC
-        LIMIT 1
-      ) AS last_unit_cost
-    FROM inventory i
-    WHERE i.item_id = ?
-      AND i.status = 'active'
-    LIMIT 1
-  `;
-
-  db.query(getInventoryItemQuery, [numericItemId], (err, itemResults) => {
-    if (err) {
-      console.error('Error fetching inventory item for auto draft:', err);
-      return res.status(500).json({
-        success: false,
-        message: 'Error fetching inventory item data'
-      });
-    }
-
-    if (!itemResults || itemResults.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Inventory item not found or inactive'
-      });
-    }
-
-    const item = itemResults[0];
-    // Allow auto-draft even without vendor - user can set it later when converting draft to PR
-    const supplier = (item.vendor || '').trim() || 'TBD';
-
-    const requestedQuantity = Number(suggested_quantity);
-    if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Quantity is required for auto draft. Please input real quantity manually.'
-      });
-    }
-
-    const suggestedQuantity = Math.floor(requestedQuantity);
-    const unitCost = 0;
-    const totalCost = 0;
-
-    const getLatestBaseIdQuery = 'SELECT base_id FROM procurement_requests ORDER BY base_id DESC LIMIT 1';
-
-    db.query(getLatestBaseIdQuery, (baseIdErr, baseIdResults) => {
-      if (baseIdErr) {
-        console.error('Error generating base_id for auto draft:', baseIdErr);
+      if (checkErr) {
+        console.error('Error checking existing draft:', checkErr);
         return res.status(500).json({
           success: false,
-          message: 'Error generating draft procurement ID'
+          message: 'Error checking existing draft'
         });
       }
 
-      const latestBaseId = baseIdResults.length > 0 ? Number(baseIdResults[0].base_id) : 0;
+      if (checkResults.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'This item has already been auto-drafted. Please check the Draft section in Procurement.'
+        });
+      }
 
-      const insertDraft = (baseId, retryCount = 0) => {
-        if (retryCount > 50) {
+      const getInventoryItemQuery = `
+        SELECT
+          i.item_id,
+          i.item_name,
+          i.stock_quantity,
+          i.minimum_stock,
+          i.vendor,
+          (
+            SELECT pri.cost
+            FROM procurement_request_items pri
+            JOIN procurement_requests pr ON pr.pr_id = pri.pr_id
+            WHERE pri.item_id = i.item_id
+              AND pri.item_classification = 'Supplies'
+              AND pr.status = 'Received'
+              AND COALESCE(pr.deleted_from_received, 0) = 0
+            ORDER BY pr.created_at DESC, pr.pr_id DESC
+            LIMIT 1
+          ) AS last_unit_cost
+        FROM inventory i
+        WHERE i.item_id = ?
+          AND i.status = 'active'
+        LIMIT 1
+      `;
+
+      db.query(getInventoryItemQuery, [numericItemId], (err, itemResults) => {
+        if (err) {
+          console.error('Error fetching inventory item for auto draft:', err);
           return res.status(500).json({
             success: false,
-            message: 'Unable to generate unique procurement ID'
+            message: 'Error fetching inventory item data'
           });
         }
 
-        const prId = `PR${baseId.toString().padStart(5, '0')}`;
-        const insertRequestQuery = `
-          INSERT INTO procurement_requests (
-            pr_id, base_id, requested_by, supplier, marketplace_link,
-            attachment, status, total_cost
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
+        if (!itemResults || itemResults.length === 0) {
+          return res.status(404).json({
+            success: false,
+            message: 'Inventory item not found or inactive'
+          });
+        }
 
-        db.query(
-          insertRequestQuery,
-          [
-            prId,
-            baseId,
-            finalRequestedBy,
-            supplier,
-            null,
-            null,
-            'Draft',
-            totalCost
-          ],
-          (insertRequestErr) => {
-            if (insertRequestErr) {
-              if (insertRequestErr.code === 'ER_DUP_ENTRY') {
-                return insertDraft(baseId + 1, retryCount + 1);
-              }
+        const item = itemResults[0];
+        const supplier = (item.vendor || '').trim() || 'TBD';
 
-              console.error('Error inserting auto draft procurement request:', insertRequestErr);
+        const requestedQuantity = Number(suggested_quantity);
+        if (!Number.isFinite(requestedQuantity) || requestedQuantity <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Quantity is required for auto draft. Please input real quantity manually.'
+          });
+        }
+
+        const suggestedQuantity = Math.floor(requestedQuantity);
+        const unitCost = 0;
+        const totalCost = 0;
+
+        const getLatestBaseIdQuery = 'SELECT base_id FROM procurement_requests ORDER BY base_id DESC LIMIT 1';
+
+        db.query(getLatestBaseIdQuery, (baseIdErr, baseIdResults) => {
+          if (baseIdErr) {
+            console.error('Error generating base_id for auto draft:', baseIdErr);
+            return res.status(500).json({
+              success: false,
+              message: 'Error generating draft procurement ID'
+            });
+          }
+
+          const latestBaseId = baseIdResults.length > 0 ? Number(baseIdResults[0].base_id) : 0;
+
+          const insertDraft = (baseId, retryCount = 0) => {
+            if (retryCount > 50) {
               return res.status(500).json({
                 success: false,
-                message: 'Error creating draft procurement request'
+                message: 'Unable to generate unique procurement ID'
               });
             }
 
-            const insertItemQuery = `
-              INSERT INTO procurement_request_items (
-                pr_id, item_classification, item_name, item_id, asset_id, quantity,
-                cost, additional_charge, additional_cost, total_cost
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            const prId = `PR${baseId.toString().padStart(5, '0')}`;
+            const insertRequestQuery = `
+              INSERT INTO procurement_requests (
+                pr_id, base_id, requested_by, supplier, marketplace_link,
+                attachment, status, total_cost
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
             db.query(
-              insertItemQuery,
+              insertRequestQuery,
               [
                 prId,
-                'Supplies',
-                item.item_name,
-                item.item_id,
+                baseId,
+                finalRequestedBy,
+                supplier,
                 null,
-                suggestedQuantity,
-                unitCost,
-                '',
-                0,
+                null,
+                'Draft',
                 totalCost
               ],
-              (insertItemErr) => {
-                if (insertItemErr) {
-                  console.error('Error inserting auto draft procurement item:', insertItemErr);
+              (insertRequestErr) => {
+                if (insertRequestErr) {
+                  if (insertRequestErr.code === 'ER_DUP_ENTRY') {
+                    return insertDraft(baseId + 1, retryCount + 1);
+                  }
+
+                  console.error('Error inserting auto draft procurement request:', insertRequestErr);
                   return res.status(500).json({
                     success: false,
-                    message: 'Draft request created, but failed to insert draft item'
+                    message: 'Error creating draft procurement request'
                   });
                 }
 
-                return res.json({
-                  success: true,
-                  message: 'Auto draft procurement request created successfully',
-                  data: {
-                    pr_id: prId,
-                    supplier,
-                    item_name: item.item_name,
-                    suggested_quantity: suggestedQuantity,
-                    estimated_unit_cost: unitCost,
-                    estimated_total_cost: totalCost,
-                    note: 'Quantity and cost in draft must be filled manually with real quotation data.'
+                const insertItemQuery = `
+                  INSERT INTO procurement_request_items (
+                    pr_id, item_classification, item_name, item_id, asset_id, quantity,
+                    cost, additional_charge, additional_cost, total_cost
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `;
+
+                db.query(
+                  insertItemQuery,
+                  [
+                    prId,
+                    'Supplies',
+                    item.item_name,
+                    item.item_id,
+                    null,
+                    suggestedQuantity,
+                    unitCost,
+                    '',
+                    0,
+                    totalCost
+                  ],
+                  (insertItemErr) => {
+                    if (insertItemErr) {
+                      console.error('Error inserting auto draft procurement item:', insertItemErr);
+                      return res.status(500).json({
+                        success: false,
+                        message: 'Draft request created, but failed to insert draft item'
+                      });
+                    }
+
+                    return res.json({
+                      success: true,
+                      message: 'Auto draft procurement request created successfully',
+                      data: {
+                        pr_id: prId,
+                        supplier,
+                        item_name: item.item_name,
+                        suggested_quantity: suggestedQuantity,
+                        estimated_unit_cost: unitCost,
+                        estimated_total_cost: totalCost,
+                        note: 'Quantity and cost in draft must be filled manually with real quotation data.'
+                      }
+                    });
                   }
-                });
+                );
               }
             );
-          }
-        );
-      };
+          };
 
-      insertDraft(latestBaseId + 1);
+          insertDraft(latestBaseId + 1);
+        });
+      });
     });
   });
-  });
-  });
+});
 
 router.get('/:pr_id', (req, res) => {
   const db = req.app.locals.db;
