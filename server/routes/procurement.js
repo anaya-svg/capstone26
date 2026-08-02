@@ -339,7 +339,7 @@ router.get('/summary', (req, res) => {
 
   const query = `
     SELECT
-      COUNT(CASE WHEN status = 'Draft' AND rejected_from_waiting IS NULL THEN 1 END) as draft,
+      COUNT(CASE WHEN status = 'Draft' AND (rejected_from_waiting IS NULL OR rejected_from_waiting = 0) THEN 1 END) as draft,
       COUNT(CASE WHEN status = 'Waiting Approval' THEN 1 END) as waiting_approval,
       COUNT(CASE WHEN status = 'Approved' THEN 1 END) as approved,
       COUNT(CASE WHEN status = 'Rejected' OR (status = 'Draft' AND rejected_from_waiting = TRUE) OR (status = 'Rejected' AND deleted_from_received = TRUE) THEN 1 END) as rejected,
