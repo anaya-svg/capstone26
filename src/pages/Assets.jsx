@@ -1368,7 +1368,7 @@ function Assets() {
                             event.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {event.status}
+                            {event.status === 'upcoming' ? 'Upcoming' : event.status === 'in_progress' ? 'In Progress' : event.status}
                           </span>
                         </div>
                       </div>
