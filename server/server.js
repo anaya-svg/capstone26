@@ -247,49 +247,6 @@ const createProcurementRequestItemsTable = () => {
   });
 };
 
-const createBoothSetupsTable = () => {
-  const createTableQuery = `
-    CREATE TABLE IF NOT EXISTS booth_setups (
-      booth_setup_id INT AUTO_INCREMENT PRIMARY KEY,
-      booth_setup_name VARCHAR(255) NOT NULL UNIQUE,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `;
-
-  db.query(createTableQuery, (err, result) => {
-    if (err) {
-      console.error('Error creating booth_setups table:', err);
-    } else {
-      console.log('Booth Setups table ready');
-      const checkQuery = 'SELECT COUNT(*) as count FROM booth_setups';
-      db.query(checkQuery, (err, result) => {
-        if (err) {
-          console.error('Error checking booth_setups count:', err);
-        } else if (result[0].count === 0) {
-          const insertQuery = `
-            INSERT INTO booth_setups (booth_setup_name) VALUES
-            ('Photobooth Standard'),
-            ('Photobooth Premium'),
-            ('360 Booth'),
-            ('Mirror Booth'),
-            ('GIF Booth'),
-            ('Video Booth'),
-            ('Green Screen Booth'),
-            ('Open Air Booth')
-          `;
-          db.query(insertQuery, (err) => {
-            if (err) {
-              console.error('Error inserting default booth setups:', err);
-            } else {
-              console.log('Default booth setups inserted');
-            }
-          });
-        }
-      });
-    }
-  });
-};
-
 const createEventsTable = () => {
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS events (
@@ -898,7 +855,6 @@ createUsersTable();
 createPromotionsTable();
 createProcurementRequestsTable();
 createProcurementRequestItemsTable();
-createBoothSetupsTable();
 createEventsTable();
 createEventIdTrigger();
 createCalendarActivitiesTable();
@@ -945,9 +901,6 @@ app.use('/api/categories', requireAuth, categoriesRoutes);
 
 const uomRoutes = require('./routes/uom');
 app.use('/api/uom', requireAuth, uomRoutes);
-
-const boothSetupsRoutes = require('./routes/boothSetups');
-app.use('/api/booth-setups', requireAuth, boothSetupsRoutes);
 
 const vendorsRoutes = require('./routes/vendors');
 app.use('/api/vendors', requireAuth, vendorsRoutes);
