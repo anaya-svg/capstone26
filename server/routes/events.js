@@ -932,6 +932,9 @@ router.post('/', (req, res) => {
                   if (autoStatus === 'in_progress') {
                     updateAssetLocations(event_id, 'Off Site', db);
                     updateAssetStatusByEventStatus(event_id, 'in_progress', db);
+                  } else if (autoStatus === 'completed' || autoStatus === 'cancelled') {
+                    restoreAssetLocations(event_id, db);
+                    updateAssetStatusByEventStatus(event_id, autoStatus, db);
                   }
                   res.json({ success: true, message: 'Event created successfully', event_id: event_id });
                 })
