@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, Pencil, Trash2, Plus, Minus, Download, Search, Check, Sparkles } from 'lucide-react'
+import { Eye, Pencil, Trash2, Plus, Minus, Download, Search, Check, Sparkles, AlertCircle } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import SnapFunny from '../components/SnapFunny'
 import { exportToExcel } from '../utils/exportExcel'
