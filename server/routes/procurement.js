@@ -376,18 +376,44 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
     });
   }
 
-  // Check if there's already a Draft PR for this item
-  const checkExistingDraftQuery = `
-    SELECT pr.pr_id
-    FROM procurement_requests pr
-    JOIN procurement_request_items pri ON pr.pr_id = pri.pr_id
-    WHERE pri.item_id = ?
-      AND pr.status = 'Draft'
-      AND (pr.rejected_from_waiting IS NULL OR pr.rejected_from_waiting = 0)
+  // Convert display_id to numeric item_id if needed
+  const getItemIdQuery = `
+    SELECT item_id, display_id
+    FROM inventory
+    WHERE item_id = ? OR display_id = ?
     LIMIT 1
   `;
 
-  db.query(checkExistingDraftQuery, [item_id], (checkErr, checkResults) => {
+  db.query(getItemIdQuery, [item_id, item_id], (idErr, idResults) => {
+    if (idErr) {
+      console.error('Error fetching inventory item ID:', idErr);
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching inventory item ID'
+      });
+    }
+
+    if (!idResults || idResults.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inventory item not found'
+      });
+    }
+
+    const numericItemId = idResults[0].item_id;
+
+    // Check if there's already a Draft PR for this item
+    const checkExistingDraftQuery = `
+      SELECT pr.pr_id
+      FROM procurement_requests pr
+      JOIN procurement_request_items pri ON pr.pr_id = pri.pr_id
+      WHERE pri.item_id = ?
+        AND pr.status = 'Draft'
+        AND (pr.rejected_from_waiting IS NULL OR pr.rejected_from_waiting = 0)
+      LIMIT 1
+    `;
+
+    db.query(checkExistingDraftQuery, [numericItemId], (checkErr, checkResults) => {
     if (checkErr) {
       console.error('Error checking existing draft:', checkErr);
       return res.status(500).json({
@@ -427,7 +453,7 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
     LIMIT 1
   `;
 
-  db.query(getInventoryItemQuery, [item_id], (err, itemResults) => {
+  db.query(getInventoryItemQuery, [numericItemId], (err, itemResults) => {
     if (err) {
       console.error('Error fetching inventory item for auto draft:', err);
       return res.status(500).json({
@@ -564,6 +590,7 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
 
       insertDraft(latestBaseId + 1);
     });
+  });
   });
 });
 
