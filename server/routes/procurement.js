@@ -376,7 +376,34 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
     });
   }
 
-  const getInventoryItemQuery = `
+  // Check if there's already a Draft PR for this item
+  const checkExistingDraftQuery = `
+    SELECT pr.pr_id
+    FROM procurement_requests pr
+    JOIN procurement_request_items pri ON pr.pr_id = pri.pr_id
+    WHERE pri.item_id = ?
+      AND pr.status = 'Draft'
+      AND (pr.rejected_from_waiting IS NULL OR pr.rejected_from_waiting = 0)
+    LIMIT 1
+  `;
+
+  db.query(checkExistingDraftQuery, [item_id], (checkErr, checkResults) => {
+    if (checkErr) {
+      console.error('Error checking existing draft:', checkErr);
+      return res.status(500).json({
+        success: false,
+        message: 'Error checking existing draft'
+      });
+    }
+
+    if (checkResults.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'This item has already been auto-drafted. Please check the Draft section in Procurement.'
+      });
+    }
+
+    const getInventoryItemQuery = `
     SELECT
       i.item_id,
       i.item_name,
