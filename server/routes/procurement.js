@@ -592,7 +592,7 @@ router.post('/auto-draft-from-inventory/:item_id', (req, res) => {
     });
   });
   });
-});
+  });
 
 router.get('/:pr_id', (req, res) => {
   const db = req.app.locals.db;
