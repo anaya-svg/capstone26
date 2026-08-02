@@ -113,7 +113,7 @@ router.get('/', (req, res) => {
       countParams.push('Rejected', 'Draft', 'Rejected');
     } else if (status === 'Draft') {
       // Filter for Draft only (exclude rejected drafts)
-      conditions.push('(pr.status = ? AND pr.rejected_from_waiting IS NULL)');
+      conditions.push('(pr.status = ? AND (pr.rejected_from_waiting IS NULL OR pr.rejected_from_waiting = 0))');
       params.push('Draft');
       countParams.push('Draft');
     } else {
