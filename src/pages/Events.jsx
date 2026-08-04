@@ -1201,12 +1201,13 @@ function Events() {
       if (invalidAsset) {
         errors.assets = 'This data doesn\'t exist. Click here'
       } else {
-        const invalidQty = assetAssignments.find(a => {
+        const invalidQtyItem = assetAssignments.find(a => {
           const asset = assets.find(asset => asset.asset_id === a.asset_id)
           return asset && a.quantity > asset.quantity
         })
-        if (invalidQty) {
-          errors.assets = 'The quantity is exceeding the maximum'
+        if (invalidQtyItem) {
+          const asset = assets.find(asset => asset.asset_id === invalidQtyItem.asset_id)
+          errors.assets = `Quantity exceeds stock. Current stock for ${asset.name} is ${asset.quantity} PC.`
         }
       }
     }
