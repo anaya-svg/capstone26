@@ -172,7 +172,7 @@ function Dashboard() {
 
     const requestedQty = Number(autoDraftQtyInput)
     if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
-      setAutoDraftError('Quantity harus diisi angka valid lebih dari 0.')
+      setAutoDraftError('Quantity harus diisi angka valid lebih dari 0 dan tidak boleh minus.')
       return
     }
 
@@ -844,22 +844,27 @@ function Dashboard() {
               <p>Current stock: <span className="font-semibold">{Number(selectedAutoDraftItem.stock_quantity) || 0}</span></p>
               <p>Minimum stock: <span className="font-semibold">{Number(selectedAutoDraftItem.minimum_stock) || 0}</span></p>
             </div>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to order *</label>
-              <input
-                type="number"
-                min="1"
-                value={autoDraftQtyInput}
-                onChange={(e) => {
-                  setAutoDraftQtyInput(e.target.value)
-                  setAutoDraftError('')
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-              {autoDraftError && (
-                <p className="text-red-600 text-sm mt-2">{autoDraftError}</p>
-              )}
-            </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to order *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={autoDraftQtyInput}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      setAutoDraftQtyInput(e.target.value)
+                      setAutoDraftError('')
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  {autoDraftError && (
+                    <p className="text-red-600 text-sm mt-2">{autoDraftError}</p>
+                  )}
+                </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={closeAutoDraftModal}

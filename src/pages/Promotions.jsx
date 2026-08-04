@@ -191,6 +191,13 @@ export default function Promotions({ isOpen, onClose }) {
       errors.day_restrictions = 'Please select at least 1 restricted day for Weekday Slump!'
     }
 
+    if (formData.discount_value < 0) {
+      errors.discount_value = 'Discount value cannot be negative!'
+    }
+    if (formData.min_transaction < 0) {
+      errors.min_transaction = 'Minimum transaction cannot be negative!'
+    }
+
     setFormErrors(errors)
     return Object.keys(errors).length === 0
   }

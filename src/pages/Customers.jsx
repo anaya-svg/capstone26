@@ -213,14 +213,17 @@ function Customers() {
     package_name: '',
     person_quantity: 1,
     duration: 7,
+    paper_quantity: 1,
     paper_type_item_id: null,
     paper_type_name: '',
-    paper_quantity: 1,
+    paper_stock: 0,
     with_photographer: false,
     promo_id: null,
-    discount_amount: 0,
-    promo_code: ''
+    promo_code: '',
+    discount_amount: 0
   })
+
+  const [visitError, setVisitError] = useState('')
 
   const [couponInput, setCouponInput] = useState('')
   const [couponError, setCouponError] = useState('')
@@ -686,6 +689,11 @@ function Customers() {
   }
 
   const handleUpdateVisitForm = (newData) => {
+    setVisitError('')
+    if (newData.person_quantity < 0 || newData.duration < 0 || newData.paper_quantity < 0) {
+      setVisitError('Numeric values cannot be negative')
+      return
+    }
     const subtotal = calculateSpending(newData)
     if (activePromo) {
       const check = recalculatePromoDiscount(activePromo, subtotal, newData.package_name, newData.visit_date)
@@ -2068,6 +2076,7 @@ function Customers() {
                         (visitFormData.package_name === 'Snap Pas Photo')
                       }
                       onClick={() => {
+                        setVisitError('')
                         const newData = { ...visitFormData, person_quantity: visitFormData.person_quantity + 1 }
                         handleUpdateVisitForm(newData)
                       }}
@@ -2076,6 +2085,7 @@ function Customers() {
                       <Plus size={20} />
                     </button>
                   </div>
+                  {visitError && <p className="text-red-500 text-xs mt-1">{visitError}</p>}
                 </div>
 
                 <div className="mb-4">
@@ -2086,6 +2096,7 @@ function Customers() {
                       onClick={() => {
                         let step = visitFormData.package_name === 'Snap Self Photo' ? 15 : 7
                         if (visitFormData.duration > step) {
+                          setVisitError('')
                           const newData = { ...visitFormData, duration: visitFormData.duration - step }
                           handleUpdateVisitForm(newData)
                         }
@@ -2098,6 +2109,7 @@ function Customers() {
                     <button
                       type="button"
                       onClick={() => {
+                        setVisitError('')
                         let step = visitFormData.package_name === 'Snap Self Photo' ? 15 : 7
                         const newData = { ...visitFormData, duration: visitFormData.duration + step }
                         handleUpdateVisitForm(newData)
@@ -2107,6 +2119,7 @@ function Customers() {
                       <Plus size={20} />
                     </button>
                   </div>
+                  {visitError && <p className="text-red-500 text-xs mt-1">{visitError}</p>}
                 </div>
 
                 <div className="mb-4 relative">

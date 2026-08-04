@@ -1122,6 +1122,18 @@ function Procurement() {
       }
     })
     
+    formData.items.forEach((item, index) => {
+      if (Number(item.quantity) <= 0) {
+        errors[`item_${index}_quantity`] = `Quantity for item ${index + 1} must be greater than 0`
+      }
+      if (Number(item.cost) < 0) {
+        errors[`item_${index}_cost`] = `Cost for item ${index + 1} cannot be negative`
+      }
+      if (Number(item.additional_cost) < 0) {
+        errors[`item_${index}_additional_cost`] = `Additional cost for item ${index + 1} cannot be negative`
+      }
+    });
+
     setFormErrors(errors)
     
     if (Object.keys(errors).length > 0) {
@@ -1719,20 +1731,35 @@ function Procurement() {
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Cost (per item) *</label>
                             <input
+                              onChange={(e) => {
+                                const newItems = [...formData.items]
+                                newItems[index].quantity = e.target.value
+                                setFormData({ ...formData, items: newItems })
+                              }}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${formErrors[`item_${index}_quantity`] ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'}`}
+                            />
+                            {formErrors[`quantity_${index}`] && (
+                              <p className="text-red-500 text-xs mt-1">{formErrors[`quantity_${index}`]}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Cost (per item) *</label>
+                            <input
                               type="number"
                               min="0"
                               step="0.01"
                               value={item.cost}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/[^0-9.]/g, '')
-                                handleItemChange(index, 'cost', value)
-                              }}
-                              onKeyPress={(e) => {
-                                if (!/[0-9.]/.test(e.key)) {
-                                  e.preventDefault()
+                              onKeyDown={(e) => {
+                                if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                                  e.preventDefault();
                                 }
                               }}
-                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${formErrors[`cost_${index}`] ? 'border-red-500' : 'border-gray-300'}`}
+                              onChange={(e) => {
+                                const newItems = [...formData.items]
+                                newItems[index].cost = e.target.value
+                                setFormData({ ...formData, items: newItems })
+                              }}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${formErrors[`cost_${index}`] ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'}`}
                             />
                             {formErrors[`cost_${index}`] && (
                               <p className="text-red-500 text-xs mt-1">{formErrors[`cost_${index}`]}</p>
@@ -1755,17 +1782,18 @@ function Procurement() {
                               min="0"
                               step="0.01"
                               value={item.additional_cost}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/[^0-9.]/g, '')
-                                handleItemChange(index, 'additional_cost', value)
-                              }}
-                              onKeyPress={(e) => {
-                                if (!/[0-9.]/.test(e.key)) {
-                                  e.preventDefault()
+                              onKeyDown={(e) => {
+                                if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                                  e.preventDefault();
                                 }
                               }}
+                              onChange={(e) => {
+                                const newItems = [...formData.items]
+                                newItems[index].additional_cost = e.target.value
+                                setFormData({ ...formData, items: newItems })
+                              }}
                               disabled={!item.additional_charge}
-                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${!item.additional_charge ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'border-gray-300'}`}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${!item.additional_charge ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'border-gray-300 dark:border-slate-600'}`}
                             />
                           </div>
                         </div>
@@ -1983,41 +2011,20 @@ function Procurement() {
                               type="number"
                               min="1"
                               value={item.quantity}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/[^0-9]/g, '')
-                                handleItemChange(index, 'quantity', value)
-                              }}
-                              onKeyPress={(e) => {
-                                if (!/[0-9]/.test(e.key)) {
-                                  e.preventDefault()
+                              onKeyDown={(e) => {
+                                if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                                  e.preventDefault();
                                 }
                               }}
-                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${formErrors[`quantity_${index}`] ? 'border-red-500' : 'border-gray-300'}`}
+                              onChange={(e) => {
+                                const newItems = [...formData.items]
+                                newItems[index].quantity = e.target.value
+                                setFormData({ ...formData, items: newItems })
+                              }}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${formErrors[`item_${index}_quantity`] ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'}`}
                             />
                             {formErrors[`quantity_${index}`] && (
                               <p className="text-red-500 text-xs mt-1">{formErrors[`quantity_${index}`]}</p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cost (per item) *</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.cost}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/[^0-9.]/g, '')
-                                handleItemChange(index, 'cost', value)
-                              }}
-                              onKeyPress={(e) => {
-                                if (!/[0-9.]/.test(e.key)) {
-                                  e.preventDefault()
-                                }
-                              }}
-                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${formErrors[`cost_${index}`] ? 'border-red-500' : 'border-gray-300'}`}
-                            />
-                            {formErrors[`cost_${index}`] && (
-                              <p className="text-red-500 text-xs mt-1">{formErrors[`cost_${index}`]}</p>
                             )}
                           </div>
                           <div>

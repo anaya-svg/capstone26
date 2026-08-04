@@ -1210,6 +1210,15 @@ function Events() {
         }
       }
     }
+    if (formData.custom_base_price < 0) errors.custom_base_price = 'Base price cannot be negative'
+    if (formData.custom_extra_hours_price < 0) errors.custom_extra_hours_price = 'Extra hours price cannot be negative'
+    if (formData.custom_backdrop_price < 0) errors.custom_backdrop_price = 'Backdrop price cannot be negative'
+    if (formData.custom_guestbook_price < 0) errors.custom_guestbook_price = 'Guestbook price cannot be negative'
+    if (formData.custom_gif_boomerang_price < 0) errors.custom_gif_boomerang_price = 'GIF/Boomerang price cannot be negative'
+    if (formData.custom_print_price < 0) errors.custom_print_price = 'Print price cannot be negative'
+    if (formData.extra_hours < 0) errors.extra_hours = 'Extra hours cannot be negative'
+    if (formData.print_quantity < 0) errors.print_quantity = 'Print quantity cannot be negative'
+    
     setFormErrors(errors)
     
     if (Object.keys(errors).length > 0) {
@@ -1653,6 +1662,11 @@ function Events() {
                             min="0"
                             placeholder="Enter custom agreed base price..."
                             value={formData.custom_base_price || ''}
+                            onKeyDown={(e) => {
+                              if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                                e.preventDefault();
+                              }
+                            }}
                             onChange={(e) => {
                               const val = e.target.value === '' ? '' : Number(e.target.value) || 0
                               const newData = { ...formData, custom_base_price: val }
@@ -2002,6 +2016,11 @@ function Events() {
                     min="0"
                     placeholder="Enter custom agreed base price..."
                     value={formData.custom_base_price || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                        e.preventDefault();
+                      }
+                    }}
                     onChange={(e) => {
                       const val = e.target.value === '' ? '' : Number(e.target.value) || 0
                       const newData = { ...formData, custom_base_price: val }
@@ -2134,6 +2153,11 @@ function Events() {
                         type="number"
                         min="0"
                         value={formData.custom_extra_hours_price || ''}
+                        onKeyDown={(e) => {
+                          if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                            e.preventDefault();
+                          }
+                        }}
                         onChange={(e) => {
                           const val = e.target.value === '' ? '' : Number(e.target.value) || 0
                           const newData = { ...formData, custom_extra_hours_price: val }

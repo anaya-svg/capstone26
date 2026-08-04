@@ -313,7 +313,7 @@ function Inventory() {
 
     const requestedQty = Number(autoDraftQtyInput)
     if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
-      setAutoDraftError('Quantity harus diisi angka valid lebih dari 0.')
+      setAutoDraftError('Quantity harus diisi angka valid lebih dari 0 dan tidak boleh minus.')
       return
     }
 
@@ -855,6 +855,13 @@ function Inventory() {
       errors.vendor = 'This data doesn\'t exist. Click here'
     }
     
+    if (formData.stock_quantity !== '' && Number(formData.stock_quantity) < 0) {
+      errors.stock_quantity = 'Stock quantity cannot be negative'
+    }
+    if (formData.minimum_stock !== '' && Number(formData.minimum_stock) < 0) {
+      errors.minimum_stock = 'Minimum stock cannot be negative'
+    }
+    
     setFormErrors(errors)
     
     if (Object.keys(errors).length > 0) {
@@ -1272,6 +1279,11 @@ function Inventory() {
                       type="number"
                       min="0"
                       value={formData.stock_quantity}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                          e.preventDefault();
+                        }
+                      }}
                       onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
@@ -1282,6 +1294,11 @@ function Inventory() {
                       type="number"
                       min="0"
                       value={formData.minimum_stock}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                          e.preventDefault();
+                        }
+                      }}
                       onChange={(e) => setFormData({ ...formData, minimum_stock: e.target.value })}
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${formErrors.minimum_stock ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'}`}
                     />
@@ -1519,6 +1536,11 @@ function Inventory() {
                       type="number"
                       min="0"
                       value={formData.stock_quantity}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                          e.preventDefault();
+                        }
+                      }}
                       onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
@@ -2334,6 +2356,11 @@ function Inventory() {
                 type="number"
                 min="1"
                 value={autoDraftQtyInput}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                    e.preventDefault();
+                  }
+                }}
                 onChange={(e) => {
                   setAutoDraftQtyInput(e.target.value)
                   setAutoDraftError('')

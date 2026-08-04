@@ -40,6 +40,7 @@ function Assets() {
   const [showScanModal, setShowScanModal] = useState(false)
   const [scanResult, setScanResult] = useState(null)
   const [isScanning, setIsScanning] = useState(false)
+  const [scanError, setScanError] = useState('')
   const [assetEvents, setAssetEvents] = useState([])
 
   const [formData, setFormData] = useState({
@@ -145,6 +146,10 @@ function Assets() {
     if (!formData.location) errors.location = 'Location is required'
     if (!formData.condition) errors.condition = 'Condition is required'
     if (!formData.quantity) errors.quantity = 'Quantity is required'
+    if (Number(formData.quantity) < 0) {
+      errors.quantity = 'Quantity cannot be negative'
+    }
+
     setFormErrors(errors)
     if (Object.keys(errors).length > 0) {
       setShowMissingDataModal(true)
@@ -202,6 +207,7 @@ function Assets() {
   ])
 
   const startCamera = async () => {
+    setScanError('')
     try {
       if (html5QrCodeRef.current) {
         try {
@@ -214,7 +220,11 @@ function Assets() {
       const html5QrCode = new Html5Qrcode('reader')
       html5QrCodeRef.current = html5QrCode
       
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } }
+      const config = { 
+        fps: 20, // Increased from 10 to 20 for better responsiveness
+        qrbox: { width: 280, height: 280 }, // Slightly larger box
+        aspectRatio: 1.0
+      }
       await html5QrCode.start(
         { facingMode: 'environment' },
         config,
@@ -376,19 +386,20 @@ function Assets() {
       if (!result || isScanning) return
       
       setIsScanning(true)
+      setScanError('')
       console.log('Scanned result:', result)
       
       const scannedAssetId = result
       const asset = assets.find(a => a.asset_id === scannedAssetId)
       
       if (!asset) {
-        showSystemNotice('error', 'Asset not found')
+        setScanError('Asset tidak terdaftar atau QR tidak dikenal')
         setIsScanning(false)
         return
       }
       
       if (asset.has_barcode !== 1) {
-        showSystemNotice('error', 'QR barcode for this asset is not active')
+        setScanError('Barcode QR untuk aset ini tidak aktif')
         setIsScanning(false)
         return
       }
@@ -1739,9 +1750,20 @@ function Assets() {
               <h2 className="text-xl font-bold mb-4">Scan QR Barcode</h2>
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">Point camera at QR barcode to scan asset</p>
-                <div className="border rounded overflow-hidden">
+                <div className="border rounded overflow-hidden relative">
                   <div id="reader" className="w-full"></div>
+                  {isScanning && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-10 pointer-events-none">
+                      <div className="w-full h-0.5 bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] animate-scan-line"></div>
+                    </div>
+                  )}
                 </div>
+                {scanError && (
+                  <div className="mt-3 p-2 bg-red-100 border border-red-200 text-red-700 text-xs rounded flex items-center gap-2 animate-shake">
+                    <AlertTriangle size={14} className="shrink-0" />
+                    <span>{scanError}</span>
+                  </div>
+                )}
               </div>
               <div className="flex justify-end">
                 <button
