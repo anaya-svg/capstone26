@@ -1177,6 +1177,8 @@ function Events() {
     }
     if (!formData.end_date) {
       errors.end_date = 'End date is required'
+    } else if (formData.start_date && new Date(formData.end_date) < new Date(formData.start_date)) {
+      errors.end_date = 'End date cannot be earlier than start date'
     }
     if (!formData.location) {
       errors.location = 'Location is required'
