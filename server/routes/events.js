@@ -871,16 +871,16 @@ router.post('/', (req, res) => {
             event_name, start_date, end_date, location, customer, customer_id, 
             package_name, extra_hours, backdrop_item_id, backdrop_quantity, 
             guestbook_album, gif_boomerang, print_item_id, print_quantity, 
-            expected_revenue, status, booth_setup, created_by, promo_id, discount_amount
+            expected_revenue, status, booth_setup, created_by, updated_by, promo_id, discount_amount
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         db.query(eventQuery, [
           event_name, start_date, end_date, location, customer, customer_id || null,
           package_name, extra_hours || 0, backdrop_item_id, backdrop_quantity || 0,
           guestbook_album || false, gif_boomerang || false, print_item_id, print_quantity || 0,
-          expected_revenue || 0, autoStatus, booth_setup || null, created_by || 'N/A',
+          expected_revenue || 0, autoStatus, booth_setup || null, created_by || 'N/A', created_by || 'N/A',
           promo_id || null, Number(discount_amount) || 0.00
         ], (err, result) => {
           if (err) {
@@ -901,7 +901,7 @@ router.post('/', (req, res) => {
             console.log('Generated event_id:', event_id);
 
             if (customer_id && expected_revenue) {
-              db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [expected_revenue, customer_id]);
+              db.query('UPDATE customers SET total_spending = total_spending + ?, updated_by = ? WHERE customer_id = ?', [expected_revenue, created_by || 'N/A', customer_id]);
             }
 
             if (assets && assets.length > 0) {
@@ -1091,6 +1091,7 @@ router.put('/:event_id', (req, res) => {
     start_date,
     end_date,
     location,
+    customer,
     customer_id,
     package_name,
     extra_hours,
@@ -1101,11 +1102,14 @@ router.put('/:event_id', (req, res) => {
     print_item_id,
     print_quantity,
     expected_revenue,
+    status,
     booth_setup,
     assets,
+    updated_by,
     promo_id,
     discount_amount
   } = req.body;
+  const updater = updated_by || 'N/A';
 
   const autoStatus = determineStatus(start_date, end_date);
 
@@ -1150,21 +1154,22 @@ router.put('/:event_id', (req, res) => {
 
       Promise.all(inventoryUpdates)
         .then(() => {
-          const updateQuery = `
-            UPDATE events SET 
-              event_name = ?, start_date = ?, end_date = ?, location = ?, status = ?,
-              package_name = ?, extra_hours = ?, backdrop_item_id = ?, backdrop_quantity = ?,
-              guestbook_album = ?, gif_boomerang = ?, print_item_id = ?, print_quantity = ?,
-              expected_revenue = ?, booth_setup = ?, promo_id = ?, discount_amount = ?
-            WHERE event_id = ?
-          `;
+          const updateEventQuery = `
+      UPDATE events
+      SET event_name = ?, start_date = ?, end_date = ?, location = ?, customer = ?, customer_id = ?, 
+          package_name = ?, extra_hours = ?, backdrop_item_id = ?, backdrop_quantity = ?, 
+          guestbook_album = ?, gif_boomerang = ?, print_item_id = ?, print_quantity = ?, 
+          expected_revenue = ?, status = ?, booth_setup = ?, updated_by = ?, promo_id = ?, discount_amount = ?
+      WHERE event_id = ?
+    `;
 
-          db.query(updateQuery, [
-            event_name, start_date, end_date, location, autoStatus,
-            package_name, extra_hours, backdrop_item_id, backdrop_quantity,
-            guestbook_album, gif_boomerang, print_item_id, print_quantity,
-            expected_revenue, booth_setup || null, promo_id || null, Number(discount_amount) || 0.00, event_id
-          ], (err) => {
+    db.query(updateEventQuery, [
+      event_name, start_date, end_date, location, customer, customer_id || null,
+      package_name, extra_hours, backdrop_item_id, backdrop_quantity, 
+      guestbook_album, gif_boomerang, print_item_id, print_quantity, 
+      expected_revenue, autoStatus, booth_setup, updater, promo_id || null, Number(discount_amount) || 0,
+      event_id
+    ], (err, result) => {
             if (err) {
               console.error('Error updating event:', err);
               return res.status(500).json({ success: false, message: 'Update error' });
@@ -1172,7 +1177,7 @@ router.put('/:event_id', (req, res) => {
 
             const revDiff = expected_revenue - oldEvent.expected_revenue;
             if (customer_id && revDiff !== 0) {
-              db.query('UPDATE customers SET total_spending = total_spending + ? WHERE customer_id = ?', [revDiff, customer_id]);
+              db.query('UPDATE customers SET total_spending = total_spending + ?, updated_by = ? WHERE customer_id = ?', [revDiff, updater || 'N/A', customer_id]);
             }
 
             db.query('DELETE FROM event_assets WHERE event_id = ?', [event_id], (err) => {

@@ -880,6 +880,7 @@ function Inventory() {
     }
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const formDataObj = new FormData()
       formDataObj.append('item_name', formData.item_name)
       formDataObj.append('category_id', '1')
@@ -888,11 +889,11 @@ function Inventory() {
       formDataObj.append('uom_id', formData.uom_id)
       formDataObj.append('vendor', formData.vendor)
       formDataObj.append('status', customStatus)
+      formDataObj.append('created_by', user?.full_name || 'N/A')
       if (formData.attachment) {
         formDataObj.append('attachment', formData.attachment)
       }
 
-      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory`, {
         method: 'POST',
         headers: {
@@ -926,6 +927,7 @@ function Inventory() {
     console.log('Frontend Debug - stock_quantity:', formData.stock_quantity, 'minimum_stock:', formData.minimum_stock, 'type:', typeof formData.stock_quantity)
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const formDataObj = new FormData()
       formDataObj.append('item_name', formData.item_name)
       formDataObj.append('category_id', '1')
@@ -933,11 +935,11 @@ function Inventory() {
       formDataObj.append('minimum_stock', Number(formData.minimum_stock === '' ? 0 : formData.minimum_stock))
       formDataObj.append('uom_id', formData.uom_id)
       formDataObj.append('vendor', formData.vendor)
+      formDataObj.append('updated_by', user?.full_name || 'N/A')
       if (formData.attachment && typeof formData.attachment !== 'string') {
         formDataObj.append('attachment', formData.attachment)
       }
 
-      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/inventory/${selectedItem.item_id}`, {
         method: 'PUT',
         headers: {
@@ -1452,7 +1454,17 @@ function Inventory() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowViewModal(false))}
           >
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem?.created_by || 'N/A'}</span>
+                {selectedItem?.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem.updated_by}</span>
+                  </>
+                )}
+              </div>
               <h2 className="text-xl font-bold mb-4">Item Details</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1516,8 +1528,18 @@ function Inventory() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowEditModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Item</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem?.created_by || 'N/A'}</span>
+                {selectedItem?.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem.updated_by}</span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Edit Item</h2>
               <form onSubmit={handleSubmitEdit} noValidate>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="mb-4">
@@ -1722,8 +1744,52 @@ function Inventory() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowDeleteModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Delete Item</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem?.created_by || 'N/A'}</span>
+                {selectedItem?.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem.updated_by}</span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Item Details</h2>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Item Name:</p>
+                  <p className="text-sm text-gray-900">{selectedItem.item_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Stock Quantity:</p>
+                  <p className="text-sm text-gray-900">{selectedItem.stock_quantity} {selectedItem.uom_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Minimum Stock:</p>
+                  <p className="text-sm text-gray-900">{selectedItem.minimum_stock} {selectedItem.uom_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">UOM:</p>
+                  <p className="text-sm text-gray-900">{selectedItem.uom_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Vendor (Last used):</p>
+                  <p className="text-sm text-gray-900">{selectedItem.last_procurement_vendor || selectedItem.vendor || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Stock Status:</p>
+                  <p className="text-sm text-gray-900">{getStockStatusLabel(selectedItem.stock_status)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Last Update:</p>
+                  <p className="text-sm text-gray-900">{formatDate(selectedItem.last_update)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Created At:</p>
+                  <p className="text-sm text-gray-900">{formatDate(selectedItem.created_at)}</p>
+                </div>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Are you sure you want to delete item "{selectedItem.item_name}"? This action cannot be undone.
               </p>

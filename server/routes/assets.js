@@ -363,8 +363,9 @@ router.get('/:asset_id/events', (req, res) => {
 
 router.post('/', upload.single('photo_attachment'), (req, res) => {
   const db = req.app.locals.db;
-  const { name, category, status, location, condition, quantity, has_barcode } = req.body;
+  const { name, category, status, location, condition, quantity, has_barcode, created_by } = req.body;
   const photo_attachment = req.file ? `/asset_attachment/${req.file.filename}` : null;
+  const creator = created_by || 'N/A';
 
   const checkQuery = `SELECT * FROM assets WHERE name = ?`;
 
@@ -385,11 +386,11 @@ router.post('/', upload.single('photo_attachment'), (req, res) => {
     }
 
     const query = `
-      INSERT INTO assets (name, category, status, location, \`condition\`, quantity, photo_attachment, has_barcode)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO assets (name, category, status, location, \`condition\`, quantity, photo_attachment, has_barcode, created_by, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    db.query(query, [name, category, status, location, condition, quantity || 1, photo_attachment, has_barcode === 'true' ? 1 : 0], (err, result) => {
+    db.query(query, [name, category, status, location, condition, quantity || 1, photo_attachment, has_barcode === 'true' ? 1 : 0, creator, creator], (err, result) => {
       if (err) {
         console.error('Error creating asset:', err);
         return res.status(500).json({
@@ -421,8 +422,9 @@ router.post('/', upload.single('photo_attachment'), (req, res) => {
 router.put('/:asset_id', upload.single('photo_attachment'), (req, res) => {
   const db = req.app.locals.db;
   const { asset_id } = req.params;
-  const { name, category, status, location, condition, quantity, has_barcode } = req.body;
+  const { name, category, status, location, condition, quantity, has_barcode, updated_by } = req.body;
   const photo_attachment = req.file ? `/asset_attachment/${req.file.filename}` : null;
+  const updater = updated_by || 'N/A';
 
   const checkQuery = `SELECT * FROM assets WHERE name = ? AND asset_id != ?`;
 
@@ -464,11 +466,11 @@ router.put('/:asset_id', upload.single('photo_attachment'), (req, res) => {
 
       const query = `
         UPDATE assets
-        SET name = ?, category = ?, status = ?, location = ?, \`condition\` = ?, quantity = ?, photo_attachment = ?, has_barcode = ?
+        SET name = ?, category = ?, status = ?, location = ?, \`condition\` = ?, quantity = ?, photo_attachment = ?, has_barcode = ?, updated_by = ?
         WHERE asset_id = ?
       `;
 
-      db.query(query, [name, category, status, location, condition, quantity || 1, photo_attachment, has_barcode === 'true' ? 1 : 0, asset_id], (err, result) => {
+      db.query(query, [name, category, status, location, condition, quantity || 1, photo_attachment, has_barcode === 'true' ? 1 : 0, updater, asset_id], (err, result) => {
         if (err) {
           console.error('Error updating asset:', err);
           return res.status(500).json({

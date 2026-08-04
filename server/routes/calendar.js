@@ -145,11 +145,11 @@ router.post('/', (req, res) => {
   }
 
   const query = `
-    INSERT INTO calendar_activities (title, notes, activity_date, repeat_type, created_by)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO calendar_activities (title, notes, activity_date, repeat_type, created_by, updated_by)
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(query, [title, notes, activity_date, repeat_type || 'none', created_by], (err, result) => {
+  db.query(query, [title, notes, activity_date, repeat_type || 'none', created_by, created_by], (err, result) => {
     if (err) {
       console.error('Error creating calendar activity:', err);
       return res.status(500).json({
@@ -195,15 +195,16 @@ router.post('/', (req, res) => {
 router.put('/:activity_id', (req, res) => {
   const db = req.app.locals.db;
   const { activity_id } = req.params;
-  const { title, notes, activity_date, repeat_type } = req.body;
+  const { title, notes, activity_date, repeat_type, updated_by } = req.body;
+  const updater = updated_by || 'N/A';
 
   const query = `
     UPDATE calendar_activities
-    SET title = ?, notes = ?, activity_date = ?, repeat_type = ?
+    SET title = ?, notes = ?, activity_date = ?, repeat_type = ?, updated_by = ?
     WHERE activity_id = ?
   `;
 
-  db.query(query, [title, notes, activity_date, repeat_type || 'none', activity_id], (err, result) => {
+  db.query(query, [title, notes, activity_date, repeat_type || 'none', updater, activity_id], (err, result) => {
     if (err) {
       return res.status(500).json({
         success: false,

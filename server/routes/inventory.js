@@ -405,9 +405,10 @@ router.get('/:id', (req, res) => {
 
 router.post('/', upload.single('attachment'), (req, res) => {
   const db = req.app.locals.db;
-  const { item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, status } = req.body;
+  const { item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, status, created_by } = req.body;
   const itemStatus = status || 'active';
   const attachment = req.file ? 'inventory_attachments/' + req.file.filename : null;
+  const creator = created_by || 'N/A';
 
   const checkDuplicateQuery = `SELECT item_id FROM inventory WHERE LOWER(item_name) = LOWER(?) AND status = 'active'`;
   db.query(checkDuplicateQuery, [item_name], (err, duplicateResult) => {
@@ -448,16 +449,16 @@ router.post('/', upload.single('attachment'), (req, res) => {
       
       if (hasAttachmentColumn) {
         query = `
-          INSERT INTO inventory (item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, attachment, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO inventory (item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, attachment, status, created_by, updated_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        params = [item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, attachment, itemStatus];
+        params = [item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, attachment, itemStatus, creator, creator];
       } else {
         query = `
-          INSERT INTO inventory (item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO inventory (item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, status, created_by, updated_by)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        params = [item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, itemStatus];
+        params = [item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, stock_status, itemStatus, creator, creator];
       }
 
       db.query(query, params, (err, result) => {
@@ -501,7 +502,8 @@ router.post('/', upload.single('attachment'), (req, res) => {
 router.put('/:id', upload.single('attachment'), (req, res) => {
   const db = req.app.locals.db;
   const itemId = req.params.id;
-  const { item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor } = req.body;
+  const { item_name, category_id, stock_quantity, minimum_stock, uom_id, vendor, updated_by } = req.body;
+  const updater = updated_by || 'N/A';
 
   const stockQty = Number(stock_quantity);
   const minStock = Number(minimum_stock);
@@ -554,11 +556,11 @@ router.put('/:id', upload.single('attachment'), (req, res) => {
 
       const query = `
         UPDATE inventory
-        SET item_name = ?, category_id = ?, stock_quantity = ?, minimum_stock = ?, uom_id = ?, vendor = ?, stock_status = ?, attachment = ?
+        SET item_name = ?, category_id = ?, stock_quantity = ?, minimum_stock = ?, uom_id = ?, vendor = ?, stock_status = ?, attachment = ?, updated_by = ?
         WHERE item_id = ?
       `;
 
-      db.query(query, [item_name, category_id, stockQty, minStock, uom_id, vendor, stock_status, attachment, itemId], (err, result) => {
+      db.query(query, [item_name, category_id, stockQty, minStock, uom_id, vendor, stock_status, attachment, updater, itemId], (err, result) => {
         if (err) {
           console.error('Error updating inventory item:', err);
           return res.status(500).json({

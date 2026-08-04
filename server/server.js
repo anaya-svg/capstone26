@@ -302,13 +302,19 @@ const createEventsTable = () => {
 
       const addCreatedByQuery = `
         ALTER TABLE events
-        ADD COLUMN created_by VARCHAR(255) NULL
+        ADD COLUMN created_by VARCHAR(255) NULL,
+        ADD COLUMN updated_by VARCHAR(255) NULL
       `;
       db.query(addCreatedByQuery, (err) => {
         if (err && err.code !== 'ER_DUP_FIELDNAME') {
-          console.error('Error adding created_by column to events table:', err);
+          console.error('Error adding created_by/updated_by columns to events table:', err);
+        } else if (err && err.code === 'ER_DUP_FIELDNAME') {
+          // If created_by exists, check for updated_by
+          db.query(`ALTER TABLE events ADD COLUMN updated_by VARCHAR(255) NULL`, (err2) => {
+            if (err2 && err2.code !== 'ER_DUP_FIELDNAME') console.error('Error adding updated_by to events:', err2);
+          });
         } else {
-          console.log('Created_by column ready in events table');
+          console.log('Created_by and Updated_by columns ready in events table');
         }
       });
 
@@ -431,7 +437,9 @@ const createCalendarActivitiesTable = () => {
       activity_date DATE NOT NULL,
       repeat_type ENUM('none', 'daily', 'weekly', 'monthly', 'yearly') DEFAULT 'none',
       created_by VARCHAR(255) NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      updated_by VARCHAR(255) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `;
   
@@ -440,6 +448,12 @@ const createCalendarActivitiesTable = () => {
       console.error('Error creating calendar_activities table:', err);
     } else {
       console.log('Calendar activities table ready');
+      db.query(`ALTER TABLE calendar_activities ADD COLUMN updated_by VARCHAR(255) NULL`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding updated_by to calendar_activities:', err);
+      });
+      db.query(`ALTER TABLE calendar_activities ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding updated_at to calendar_activities:', err);
+      });
     }
   });
 };
@@ -453,10 +467,12 @@ const createAssetsTable = () => {
       category ENUM('Camera Gear', 'Lighting', 'Booth Equipment', 'Computers', 'Furniture', 'Other') NOT NULL,
       status ENUM('Available', 'In Use', 'Maintenance', 'Drafted', 'Deleted', 'Deleted Draft') DEFAULT 'Available',
       location ENUM('In Studio', 'Off Site') NOT NULL,
-      \`condition\` ENUM('Good', 'Fair', 'Poor') NOT NULL,
+      `condition` ENUM('Good', 'Fair', 'Poor') NOT NULL,
       quantity INT DEFAULT 1,
       photo_attachment VARCHAR(255),
       has_barcode BOOLEAN DEFAULT FALSE,
+      created_by VARCHAR(255) NULL,
+      updated_by VARCHAR(255) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       deleted_reason TEXT,
@@ -471,9 +487,15 @@ const createAssetsTable = () => {
       console.error('Error creating assets table:', err);
     } else {
       console.log('Assets table ready');
+      db.query(`ALTER TABLE assets ADD COLUMN created_by VARCHAR(255) NULL`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding created_by to assets:', err);
+      });
+      db.query(`ALTER TABLE assets ADD COLUMN updated_by VARCHAR(255) NULL`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding updated_by to assets:', err);
+      });
       const alterQuery = `
         ALTER TABLE assets
-        ADD COLUMN quantity INT DEFAULT 1 AFTER \`condition\`
+        ADD COLUMN quantity INT DEFAULT 1 AFTER `condition`
       `;
       db.query(alterQuery, (err) => {
         if (err && err.code !== 'ER_DUP_FIELDNAME') {
@@ -527,6 +549,17 @@ const createCustomersTable = () => {
         
         const existingColumns = results.map(row => row.COLUMN_NAME);
         
+        if (!existingColumns.includes('created_by')) {
+          db.query(`ALTER TABLE customers ADD COLUMN created_by VARCHAR(255) NULL`, (err) => {
+            if (err) console.error('Error adding created_by to customers:', err);
+          });
+        }
+        if (!existingColumns.includes('updated_by')) {
+          db.query(`ALTER TABLE customers ADD COLUMN updated_by VARCHAR(255) NULL`, (err) => {
+            if (err) console.error('Error adding updated_by to customers:', err);
+          });
+        }
+
         const checkUniqueConstraint = `
           SELECT CONSTRAINT_NAME
           FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
@@ -594,7 +627,10 @@ const createCustomerVisitsTable = () => {
       customer_id INT NOT NULL,
       visit_date DATE NOT NULL,
       spending DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
+      created_by VARCHAR(255) NULL,
+      updated_by VARCHAR(255) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE
     )
   `;
@@ -604,6 +640,15 @@ const createCustomerVisitsTable = () => {
       console.error('Error creating customer_visits table:', err);
     } else {
       console.log('Customer visits table ready');
+      db.query(`ALTER TABLE customer_visits ADD COLUMN created_by VARCHAR(255) NULL`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding created_by to customer_visits:', err);
+      });
+      db.query(`ALTER TABLE customer_visits ADD COLUMN updated_by VARCHAR(255) NULL`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding updated_by to customer_visits:', err);
+      });
+      db.query(`ALTER TABLE customer_visits ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding updated_at to customer_visits:', err);
+      });
     }
   });
 };
@@ -641,7 +686,7 @@ const createInventoryTable = () => {
         }
         
         const existingColumns = columns.map(col => col.Field);
-        const requiredColumns = ['item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at', 'display_id'];
+        const requiredColumns = ['item_id', 'item_name', 'category_id', 'stock_quantity', 'minimum_stock', 'uom_id', 'vendor', 'stock_status', 'status', 'attachment', 'last_update', 'created_at', 'display_id', 'created_by', 'updated_by'];
         
         requiredColumns.forEach(col => {
           if (!existingColumns.includes(col)) {
@@ -650,6 +695,10 @@ const createInventoryTable = () => {
             
             if (col === 'display_id') {
               alterQuery = `ALTER TABLE inventory ADD COLUMN display_id VARCHAR(20)`;
+            } else if (col === 'created_by') {
+              alterQuery = `ALTER TABLE inventory ADD COLUMN created_by VARCHAR(255) NULL`;
+            } else if (col === 'updated_by') {
+              alterQuery = `ALTER TABLE inventory ADD COLUMN updated_by VARCHAR(255) NULL`;
             } else if (col === 'category_id') {
               alterQuery = `ALTER TABLE inventory ADD COLUMN category_id INT, ADD FOREIGN KEY (category_id) REFERENCES categories(category_id) ON DELETE SET NULL`;
             } else if (col === 'uom_id') {

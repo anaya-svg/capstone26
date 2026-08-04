@@ -1091,7 +1091,8 @@ function Events() {
       assets: assetsData,
       customer_id: formData.customer_id || null,
       booth_setup: JSON.stringify(customPrices),
-      created_by: userName
+      created_by: userName,
+      updated_by: userName
     }
 
     try {
@@ -1523,8 +1524,18 @@ function Events() {
           onMouseDown={(e) => handleBackdropClose(e, closeCreateOrEditModal)}
         >
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4">
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
+            <div className="p-6 relative">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{formData.created_by || 'N/A'}</span>
+                {formData.updated_by && formData.updated_by !== formData.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{formData.updated_by}</span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">
                 {isEditModalOpen ? 'Edit Event' : 'Create New Event'}
               </h2>
               <form onSubmit={handleSubmit}>
@@ -2471,12 +2482,19 @@ function Events() {
           onMouseDown={(e) => handleBackdropClose(e, () => setIsViewModalOpen(false))}
         >
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4">
-            <div className="p-6">
-              <div className="flex justify-between items-center border-b pb-4 mb-4">
+            <div className="p-6 relative">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedEvent?.created_by || 'N/A'}</span>
+                {selectedEvent?.updated_by && selectedEvent.updated_by !== selectedEvent.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedEvent.updated_by}</span>
+                  </>
+                )}
+              </div>
+              <div className="flex justify-between items-center border-b pb-4 mb-4 pr-32">
                 <h2 className="text-xl font-bold text-gray-800">Event Details</h2>
-                <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                  Created By: {selectedEvent.created_by || 'N/A'}
-                </span>
               </div>
               {selectedEvent.is_deleted ? (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">

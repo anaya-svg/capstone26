@@ -378,7 +378,8 @@ router.post('/:customer_id/assign-off-site', (req, res) => {
 
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
-  const { name, phone_number, email } = req.body;
+  const { name, phone_number, email, created_by } = req.body;
+  const creator = created_by || 'N/A';
 
   if (!name) {
     return res.status(400).json({
@@ -388,11 +389,11 @@ router.post('/', (req, res) => {
   }
 
   const query = `
-    INSERT INTO customers (name, phone_number, email, total_visits, last_visit_date, total_spending)
-    VALUES (?, ?, ?, 0, NULL, 0.00)
+    INSERT INTO customers (name, phone_number, email, total_visits, last_visit_date, total_spending, created_by, updated_by)
+    VALUES (?, ?, ?, 0, NULL, 0.00, ?, ?)
   `;
 
-  db.query(query, [name, phone_number, email], (err, result) => {
+  db.query(query, [name, phone_number, email, creator, creator], (err, result) => {
     if (err) {
       console.error('Error creating customer:', err);
       if (err.code === 'ER_DUP_ENTRY') {
@@ -437,8 +438,10 @@ router.post('/:customer_id/visits', (req, res) => {
     paper_type_item_id, 
     paper_quantity, 
     with_photographer,
-    promo_id
+    promo_id,
+    created_by
   } = req.body;
+  const creator = created_by || 'N/A';
 
   console.log('Creating visit for customer:', customer_id, 'with data:', req.body);
 
@@ -517,16 +520,16 @@ router.post('/:customer_id/visits', (req, res) => {
 
   function insertVisit() {
     const insertQuery = `
-      INSERT INTO customer_visits (customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id, discount_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO customer_visits (customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id, discount_amount, created_by, updated_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    db.query(insertQuery, [customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount], (err, result) => {
+    db.query(insertQuery, [customer_id, visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount, creator, creator], (err, result) => {
       if (err) {
         console.error('Error creating visit:', err);
         return res.status(500).json({ success: false, message: 'Error creating visit: ' + err.message });
       }
 
-      db.query('UPDATE customers SET total_visits = total_visits + 1, total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [spending, visit_date, customer_id], (err) => {
+      db.query('UPDATE customers SET total_visits = total_visits + 1, total_spending = total_spending + ?, last_visit_date = ?, updated_by = ? WHERE customer_id = ?', [spending, visit_date, creator, customer_id], (err) => {
         if (err) {
           console.error('Error updating customer totals:', err);
           return res.status(500).json({ success: false, message: 'Error updating customer totals: ' + err.message });
@@ -550,8 +553,10 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
     paper_quantity, 
     with_photographer,
     promo_id,
-    discount_amount
+    discount_amount,
+    updated_by
   } = req.body;
+  const updater = updated_by || 'N/A';
 
   db.query('SELECT * FROM customer_visits WHERE visit_id = ?', [visit_id], (err, results) => {
     if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Visit not found' });
@@ -617,17 +622,17 @@ router.put('/:customer_id/visits/:visit_id', (req, res) => {
       const updateQuery = `
         UPDATE customer_visits 
         SET visit_date = ?, spending = ?, package_name = ?, person_quantity = ?, duration = ?, 
-            paper_type_item_id = ?, paper_quantity = ?, with_photographer = ?, promo_id = ?, discount_amount = ?
+            paper_type_item_id = ?, paper_quantity = ?, with_photographer = ?, promo_id = ?, discount_amount = ?, updated_by = ?
         WHERE visit_id = ?
       `;
-      db.query(updateQuery, [visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount, visit_id], (err) => {
+      db.query(updateQuery, [visit_date, spending, package_name, person_quantity, duration, paper_type_item_id, paper_quantity, with_photographer, promo_id || null, promoDiscount, updater, visit_id], (err) => {
         if (err) {
           console.error('Error updating visit:', err);
           return res.status(500).json({ success: false, message: 'Error updating visit' });
         }
 
         const diff = spending - oldVisit.spending;
-        db.query('UPDATE customers SET total_spending = total_spending + ?, last_visit_date = ? WHERE customer_id = ?', [diff, visit_date, customer_id], (err) => {
+        db.query('UPDATE customers SET total_spending = total_spending + ?, last_visit_date = ?, updated_by = ? WHERE customer_id = ?', [diff, visit_date, updater, customer_id], (err) => {
           if (err) {
             console.error('Error updating customer totals:', err);
             return res.status(500).json({ success: false, message: 'Error updating customer totals' });
@@ -719,7 +724,8 @@ router.get('/:customer_id/events', (req, res) => {
 router.put('/:customer_id', (req, res) => {
   const db = req.app.locals.db;
   const { customer_id } = req.params;
-  const { name, phone_number, email } = req.body;
+  const { name, phone_number, email, updated_by } = req.body;
+  const updater = updated_by || 'N/A';
 
   if (!name) {
     return res.status(400).json({
@@ -730,11 +736,11 @@ router.put('/:customer_id', (req, res) => {
 
   const query = `
     UPDATE customers
-    SET name = ?, phone_number = ?, email = ?, updated_at = CURRENT_TIMESTAMP
+    SET name = ?, phone_number = ?, email = ?, updated_at = CURRENT_TIMESTAMP, updated_by = ?
     WHERE customer_id = ?
   `;
 
-  db.query(query, [name, phone_number, email, customer_id], (err, result) => {
+  db.query(query, [name, phone_number, email, updater, customer_id], (err, result) => {
     if (err) {
       console.error('Error updating customer:', err);
       return res.status(500).json({

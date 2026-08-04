@@ -844,7 +844,7 @@ function Customers() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user?.session_token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, created_by: user?.full_name || 'N/A' })
       })
 
       const data = await response.json()
@@ -872,7 +872,7 @@ function Customers() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user?.session_token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, updated_by: user?.full_name || 'N/A' })
       })
 
       const data = await response.json()
@@ -920,6 +920,7 @@ function Customers() {
     }
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const url = isEditingVisit 
         ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/${selectedCustomer.customer_id}/visits/${editingVisitId}`
         : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/customers/${selectedCustomer.customer_id}/visits`
@@ -929,7 +930,11 @@ function Customers() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(visitFormData)
+        body: JSON.stringify({
+          ...visitFormData,
+          created_by: user?.full_name || 'N/A',
+          updated_by: user?.full_name || 'N/A'
+        })
       })
 
       const data = await response.json()
@@ -1596,8 +1601,18 @@ function Customers() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, closeViewModal)}
           >
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4">Customer Details</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-4xl relative max-h-[95vh] overflow-y-auto m-4">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedCustomer.created_by || 'N/A'}</span>
+                {selectedCustomer.updated_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedCustomer.updated_by}</span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Customer Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Customer Name:</p>
@@ -1667,6 +1682,7 @@ function Customers() {
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Package</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider text-center">Handled By</th>
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                           </thead>
@@ -1680,6 +1696,9 @@ function Customers() {
                                   {visit.with_photographer ? ' (+ Photog)' : ''}
                                 </td>
                                 <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-gray-900">{formatCurrency(visit.spending)}</td>
+                                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 text-center font-medium">
+                                  {visit.updated_by || visit.created_by || 'N/A'}
+                                </td>
                                 <td className="px-4 py-2 whitespace-nowrap text-sm font-medium">
                                   <div className="flex gap-2">
                                     <button

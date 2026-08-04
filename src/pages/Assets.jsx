@@ -479,6 +479,7 @@ function Assets() {
       formDataToSend.append('condition', formData.condition)
       formDataToSend.append('quantity', formData.quantity)
       formDataToSend.append('has_barcode', formData.has_barcode ? 'true' : 'false')
+      formDataToSend.append('created_by', userName)
       if (formData.photo_attachment) {
         formDataToSend.append('photo_attachment', formData.photo_attachment)
       }
@@ -518,6 +519,7 @@ function Assets() {
       formDataToSend.append('condition', formData.condition)
       formDataToSend.append('quantity', formData.quantity)
       formDataToSend.append('has_barcode', formData.has_barcode ? 'true' : 'false')
+      formDataToSend.append('updated_by', userName)
       if (formData.photo_attachment) {
         formDataToSend.append('photo_attachment', formData.photo_attachment)
       }
@@ -1408,8 +1410,18 @@ function Assets() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, handleCloseEditModal)}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit Asset</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative overflow-y-auto max-h-[90vh]">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset?.created_by || 'N/A'}</span>
+                {selectedAsset?.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset.updated_by}</span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Edit Asset</h2>
               
               {/* Events Section */}
               {assetEvents.length > 0 && (
@@ -1579,7 +1591,17 @@ function Assets() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowDraftModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-sm">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset?.created_by || 'N/A'}</span>
+                {selectedAsset?.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset.updated_by}</span>
+                  </>
+                )}
+              </div>
               <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Draft Asset</h2>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to draft this asset?</p>
               <div className="flex justify-end gap-2">
@@ -1600,42 +1622,25 @@ function Assets() {
           </div>
         )}
 
-        {/* Undraft Confirmation Modal */}
-        {showUndraftModal && selectedAsset && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
-            onMouseDown={(e) => handleBackdropClose(e, () => setShowUndraftModal(false))}
-          >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-sm">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Undraft Asset</h2>
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to undraft this asset? The status will become Available.</p>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setShowUndraftModal(false)}
-                  className="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmUndraft}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Yes
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Delete Modal */}
         {showDeleteModal && selectedAsset && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowDeleteModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Delete Asset</h2>
-              <div className="space-y-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset?.created_by || 'N/A'}</span>
+                {selectedAsset?.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset.updated_by}</span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white leading-tight">Asset Details</h2>
+              <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Delete Reason *</label>
                   <textarea
@@ -1672,8 +1677,18 @@ function Assets() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowHardDeleteModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-sm">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Permanently Delete Asset</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative">
+              <div className="absolute top-6 right-6 flex flex-col items-end">
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset?.created_by || 'N/A'}</span>
+                {selectedAsset?.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
+                  <>
+                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset.updated_by}</span>
+                  </>
+                )}
+              </div>
+              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white leading-tight">Asset Details</h2>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to permanently delete this asset? This action cannot be undone.</p>
               <div className="flex justify-end gap-2">
                 <button

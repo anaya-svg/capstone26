@@ -150,12 +150,13 @@ function Calendar() {
     e.preventDefault()
     if (!validateForm()) return
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/calendar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...activityForm,
-          created_by: userName
+          created_by: user?.full_name || 'N/A'
         })
       })
       const data = await response.json()
@@ -219,10 +220,14 @@ function Calendar() {
     e.preventDefault()
     if (!validateForm()) return
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/calendar/${selectedActivity.activity_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(activityForm)
+        body: JSON.stringify({
+          ...activityForm,
+          updated_by: user?.full_name || 'N/A'
+        })
       })
       const data = await response.json()
       if (data.success) {
@@ -573,54 +578,59 @@ function Calendar() {
       {isViewModalOpen && selectedActivity && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
-          onMouseDown={(e) => handleBackdropClose(e, () => {
-            setIsViewModalOpen(false)
-            setFormErrors({})
-          })}
+          onMouseDown={(e) => handleBackdropClose(e, () => setIsViewModalOpen(false))}
         >
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4">
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
-                {isEditMode ? 'Edit Activity' : 'Activity Details'}
-              </h2>
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md relative max-h-[90vh] overflow-y-auto">
+            <div className="absolute top-6 right-6 flex flex-col items-end">
+              <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
+              <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedActivity.created_by || 'N/A'}</span>
+              {selectedActivity.updated_by && selectedActivity.updated_by !== selectedActivity.created_by && (
+                <>
+                  <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
+                  <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedActivity.updated_by}</span>
+                </>
+              )}
+            </div>
+            <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Activity Details</h2>
+            <div className="space-y-4 mt-4">
               {isEditMode ? (
-                <form onSubmit={handleUpdateActivity} noValidate>
+                <form onSubmit={handleUpdateActivity}>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title *</label>
                       <input
                         type="text"
+                        required
                         value={activityForm.title}
                         onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${formErrors.title ? 'border-red-500' : 'border-gray-300'}`}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${formErrors.title ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'}`}
                       />
-                      {formErrors.title && <p className="text-red-500 text-xs mt-1">{formErrors.title}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
                       <textarea
                         value={activityForm.notes}
                         onChange={(e) => setActivityForm({ ...activityForm, notes: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                         rows="3"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date *</label>
                       <input
                         type="date"
+                        required
                         value={activityForm.activity_date}
                         onChange={(e) => setActivityForm({ ...activityForm, activity_date: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${formErrors.activity_date ? 'border-red-500' : 'border-gray-300'}`}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${formErrors.activity_date ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'}`}
                       />
-                      {formErrors.activity_date && <p className="text-red-500 text-xs mt-1">{formErrors.activity_date}</p>}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Repeat</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Repeat</label>
                       <select
                         value={activityForm.repeat_type}
                         onChange={(e) => setActivityForm({ ...activityForm, repeat_type: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white"
                       >
                         <option value="none">One-time</option>
                         <option value="daily">Daily</option>
@@ -669,10 +679,6 @@ function Calendar() {
                     <div>
                       <span className="text-sm font-medium text-gray-700">Repeat:</span>
                       <p className="text-gray-800">{selectedActivity.repeat_type !== 'none' ? selectedActivity.repeat_type : 'One-time'}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Created by:</span>
-                      <p className="text-gray-800">{selectedActivity.created_by}</p>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2">
