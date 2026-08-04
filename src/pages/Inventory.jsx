@@ -1455,17 +1455,19 @@ function Inventory() {
             onMouseDown={(e) => handleBackdropClose(e, () => setShowViewModal(false))}
           >
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
-              <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem?.created_by || 'N/A'}</span>
-                {selectedItem?.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
-                  <>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem.updated_by}</span>
-                  </>
-                )}
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Item Details</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedItem.created_by || 'N/A'}
+                  </span>
+                  {selectedItem.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {selectedItem.updated_by}
+                    </span>
+                  )}
+                </div>
               </div>
-              <h2 className="text-xl font-bold mb-4">Item Details</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Item Name:</p>
@@ -1529,17 +1531,19 @@ function Inventory() {
             onMouseDown={(e) => handleBackdropClose(e, () => setShowEditModal(false))}
           >
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
-              <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem?.created_by || 'N/A'}</span>
-                {selectedItem?.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
-                  <>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem.updated_by}</span>
-                  </>
-                )}
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Edit Item</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedItem.created_by || 'N/A'}
+                  </span>
+                  {selectedItem.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {selectedItem.updated_by}
+                    </span>
+                  )}
+                </div>
               </div>
-              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Edit Item</h2>
               <form onSubmit={handleSubmitEdit} noValidate>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="mb-4">
@@ -1745,17 +1749,19 @@ function Inventory() {
             onMouseDown={(e) => handleBackdropClose(e, () => setShowDeleteModal(false))}
           >
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
-              <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem?.created_by || 'N/A'}</span>
-                {selectedItem?.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
-                  <>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedItem.updated_by}</span>
-                  </>
-                )}
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Item Details</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedItem.created_by || 'N/A'}
+                  </span>
+                  {selectedItem.updated_by && selectedItem.updated_by !== selectedItem.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {selectedItem.updated_by}
+                    </span>
+                  )}
+                </div>
               </div>
-              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Item Details</h2>
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Item Name:</p>

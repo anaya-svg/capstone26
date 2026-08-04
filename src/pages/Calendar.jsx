@@ -371,9 +371,6 @@ function Calendar() {
                 onClick={handleOpenAddModal}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5 text-sm font-medium shadow-sm"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
                 Add Reminder
               </button>
               <select
@@ -581,17 +578,19 @@ function Calendar() {
           onMouseDown={(e) => handleBackdropClose(e, () => setIsViewModalOpen(false))}
         >
           <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md relative max-h-[90vh] overflow-y-auto">
-            <div className="absolute top-6 right-6 flex flex-col items-end">
-              <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-              <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedActivity.created_by || 'N/A'}</span>
-              {selectedActivity.updated_by && selectedActivity.updated_by !== selectedActivity.created_by && (
-                <>
-                  <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                  <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedActivity.updated_by}</span>
-                </>
-              )}
+            <div className="flex justify-between items-center border-b pb-4 mb-4">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white">Activity Details</h2>
+              <div className="flex flex-col items-end">
+                <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                  Created By: {selectedActivity.created_by || 'N/A'}
+                </span>
+                {selectedActivity.updated_by && selectedActivity.updated_by !== selectedActivity.created_by && (
+                  <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                    Updated By: {selectedActivity.updated_by}
+                  </span>
+                )}
+              </div>
             </div>
-            <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Activity Details</h2>
             <div className="space-y-4 mt-4">
               {isEditMode ? (
                 <form onSubmit={handleUpdateActivity}>
@@ -746,20 +745,17 @@ function Calendar() {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4">
             <div className="p-6">
               <div className="flex justify-between items-center border-b pb-4 mb-4">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold text-gray-800">Event Details</h2>
-                  <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+                <h2 className="text-xl font-bold text-gray-800">Event Details</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
                     Created By: {selectedEvent?.created_by || 'N/A'}
                   </span>
+                  {selectedEvent?.updated_by && selectedEvent.updated_by !== selectedEvent.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {selectedEvent.updated_by}
+                    </span>
+                  )}
                 </div>
-                <button 
-                  onClick={() => setIsEventViewModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
               </div>
               
               <div className="space-y-6">

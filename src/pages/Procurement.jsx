@@ -675,7 +675,7 @@ function Procurement() {
         }
       ],
       vendor: request.supplier || '',
-      vendor_id: null,
+      vendor_id: request.vendor_id || (vendors.find(v => v.vendor_name === request.supplier)?.vendor_id) || 'existing',
       marketplace_link: request.marketplace_link,
       attachment: request.attachment,
       status: request.status
@@ -696,9 +696,11 @@ function Procurement() {
 
     const formDataObj = new FormData()
     formDataObj.append('items', JSON.stringify(formData.items))
+    formDataObj.append('requested_by', selectedRequest.requested_by)
     formDataObj.append('supplier', formData.vendor)
     formDataObj.append('marketplace_link', formData.marketplace_link)
     formDataObj.append('status', selectedRequest.status)
+    formDataObj.append('updated_by', userName || 'Unknown User')
     formDataObj.append('existing_attachment', selectedRequest.attachment || '')
     
     if (formData.attachment) {
@@ -716,6 +718,9 @@ function Procurement() {
       })
       const data = await response.json()
       if (data.success) {
+        if (data.data) {
+          setSelectedRequest(data.data)
+        }
         setIsEditModalOpen(false)
         fetchSummary()
         fetchProcurementRequests(statusFilter)
@@ -824,7 +829,7 @@ function Procurement() {
     doc.setFont('times', 'bold')
     doc.text('Total Cost:', leftCol, yPos)
     doc.setFont('times', 'normal')
-    doc.text(`Rp ${Number(selectedRequest.total_cost).toLocaleString('id-ID')}`, leftCol + valueOffset, yPos)
+    doc.text(`Rp ${formatCost(selectedRequest.total_cost)}`, leftCol + valueOffset, yPos)
 
     if (selectedRequest.attachment) {
       yPos += 18
@@ -852,19 +857,18 @@ function Procurement() {
     doc.text('Items', leftCol, yPos)
     yPos += 8
 
-    const tableData = selectedRequest.items.map(item => [
-      item.item_classification,
+    const tableData = selectedRequest.items.map((item, index) => [
+      index + 1,
       item.item_name,
-      item.quantity.toString(),
-      `Rp ${Number(item.cost).toLocaleString('id-ID')}`,
+      item.quantity,
+      `Rp ${formatCost(item.cost)}`,
       item.additional_charge || '-',
-      item.additional_cost ? `Rp ${Number(item.additional_cost).toLocaleString('id-ID')}` : '-',
-      `Rp ${Number(item.total_cost).toLocaleString('id-ID')}`
+      item.additional_cost ? `Rp ${formatCost(item.additional_cost)}` : '-',
+      `Rp ${formatCost(item.total_cost)}`
     ])
 
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Classification', 'Item Name', 'Qty', 'Cost/Item', 'Add. Charge', 'Add. Cost', 'Total']],
+    doc.autoTable({
+      head: [['No', 'Item Name', 'Qty', 'Cost', 'Charge', 'Add. Cost', 'Total']],
       body: tableData,
       theme: 'grid',
       headStyles: {
@@ -951,7 +955,8 @@ function Procurement() {
     // }
 
     try {
-      const payload = { status: newStatus }
+      const user = JSON.parse(sessionStorage.getItem('user'))
+      const payload = { status: newStatus, updated_by: user?.full_name || 'Unknown User' }
       if (rejectionReason) {
         payload.rejection_reason = rejectionReason
       }
@@ -964,6 +969,9 @@ function Procurement() {
       const data = await response.json()
       console.log('Response:', data)
       if (data.success) {
+        if (data.data && selectedRequest && selectedRequest.pr_id === pr_id) {
+          setSelectedRequest(data.data)
+        }
         fetchSummary()
         fetchProcurementRequests(statusFilter)
       } else {
@@ -1038,15 +1046,18 @@ function Procurement() {
     }
 
     try {
+      const user = JSON.parse(sessionStorage.getItem('user'))
       let url = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/${pr_id}`
       if (request.status === 'Received') {
         url += '?status=deleted'
         if (rejectionReason) {
           url += `&rejection_reason=${encodeURIComponent(rejectionReason)}`
         }
+        url += `&updated_by=${encodeURIComponent(user?.full_name || 'Unknown User')}`
+      } else {
+        url += `?updated_by=${encodeURIComponent(user?.full_name || 'Unknown User')}`
       }
 
-      const user = JSON.parse(sessionStorage.getItem('user'))
       const response = await fetch(url, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user?.session_token}` }
@@ -1068,7 +1079,7 @@ function Procurement() {
     if (!selectedRequestForDelete) return
     try {
       const user = JSON.parse(sessionStorage.getItem('user'))
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/${selectedRequestForDelete.pr_id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/procurement/${selectedRequestForDelete.pr_id}?updated_by=${encodeURIComponent(user?.full_name || 'Unknown User')}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user?.session_token}` }
       })
@@ -1092,7 +1103,7 @@ function Procurement() {
     
     if (!vendorSearchTerm) {
       errors.vendor = 'Vendor is required'
-    } else if (!formData.vendor_id) {
+    } else if (!formData.vendor_id && formData.vendor_id !== 'existing') {
       errors.vendor = 'This data doesn\'t exist. Click here'
     }
     
@@ -1230,7 +1241,15 @@ function Procurement() {
     }
   }
 
-  const getStatusColor = (status, deletedFromReceived) => {
+  const formatCost = (value) => {
+  const num = Number(value)
+  if (Number.isInteger(num)) {
+    return num.toLocaleString('id-ID')
+  }
+  return num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
+
+const getStatusColor = (status, deletedFromReceived) => {
     if (deletedFromReceived) return 'bg-red-200 text-red-900'
     switch (status) {
       case 'Draft': return 'bg-gray-100 text-gray-800'
@@ -1458,7 +1477,7 @@ function Procurement() {
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{request.supplier || request.vendor}</td>
                     <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                       <div className="flex flex-col">
-                        <span>Rp {Number(request.total_cost).toLocaleString('id-ID')}</span>
+                        <span>Rp {formatCost(request.total_cost)}</span>
                         {hasMissingQuotation(request.items) && (
                           <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">Need quotation</span>
                         )}
@@ -1731,20 +1750,6 @@ function Procurement() {
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Cost (per item) *</label>
                             <input
-                              onChange={(e) => {
-                                const newItems = [...formData.items]
-                                newItems[index].quantity = e.target.value
-                                setFormData({ ...formData, items: newItems })
-                              }}
-                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${formErrors[`item_${index}_quantity`] ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'}`}
-                            />
-                            {formErrors[`quantity_${index}`] && (
-                              <p className="text-red-500 text-xs mt-1">{formErrors[`quantity_${index}`]}</p>
-                            )}
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cost (per item) *</label>
-                            <input
                               type="number"
                               min="0"
                               step="0.01"
@@ -1932,9 +1937,16 @@ function Procurement() {
               <div className="p-6">
                 <div className="flex justify-between items-center border-b pb-4 mb-4">
                   <h2 className="text-xl font-bold text-gray-800">Edit Purchase Request ({selectedRequest.pr_id})</h2>
-                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                    Created By: {selectedRequest.requested_by}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                      Created By: {selectedRequest.requested_by}
+                    </span>
+                    {selectedRequest.updated_by && (
+                      <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        Updated By: {selectedRequest.updated_by}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <form onSubmit={handleUpdate} noValidate>
                   <div className="grid grid-cols-1 gap-4 mb-6">
@@ -2025,6 +2037,29 @@ function Procurement() {
                             />
                             {formErrors[`quantity_${index}`] && (
                               <p className="text-red-500 text-xs mt-1">{formErrors[`quantity_${index}`]}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Cost per item *</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.cost}
+                              onKeyDown={(e) => {
+                                if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onChange={(e) => {
+                                const newItems = [...formData.items]
+                                newItems[index].cost = e.target.value
+                                setFormData({ ...formData, items: newItems })
+                              }}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white ${formErrors[`cost_${index}`] ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'}`}
+                            />
+                            {formErrors[`cost_${index}`] && (
+                              <p className="text-red-500 text-xs mt-1">{formErrors[`cost_${index}`]}</p>
                             )}
                           </div>
                           <div>
@@ -2186,9 +2221,16 @@ function Procurement() {
               <div className="p-6">
                 <div className="flex justify-between items-center border-b pb-4 mb-4">
                   <h2 className="text-xl font-bold text-gray-800">Purchase Request Details</h2>
-                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                    Created By: {selectedRequest.requested_by}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                      Created By: {selectedRequest.requested_by}
+                    </span>
+                    {selectedRequest.updated_by && (
+                      <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        Updated By: {selectedRequest.updated_by}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-6">
                   <div>
@@ -2232,7 +2274,7 @@ function Procurement() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Total Cost</label>
-                        <p className="text-gray-900 font-bold">Rp {Number(selectedRequest.total_cost).toLocaleString('id-ID')}</p>
+                        <p className="text-gray-900 font-bold">Rp {formatCost(selectedRequest.total_cost)}</p>
                       </div>
                       <div className="col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">Image Attachment</label>
@@ -2299,7 +2341,7 @@ function Procurement() {
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Cost (per item)</label>
-                                <p className="text-gray-900">Rp {Number(item.cost).toLocaleString('id-ID')}</p>
+                                <p className="text-gray-900">Rp {formatCost(item.cost)}</p>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Additional Charge</label>
@@ -2307,11 +2349,11 @@ function Procurement() {
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Additional Cost</label>
-                                <p className="text-gray-900">{item.additional_cost ? `Rp ${Number(item.additional_cost).toLocaleString('id-ID')}` : '-'}</p>
+                                <p className="text-gray-900">{item.additional_cost ? `Rp ${formatCost(item.additional_cost)}` : '-'}</p>
                               </div>
                               <div className="col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Item Total Cost</label>
-                                <p className="text-gray-900 font-bold">Rp {Number(item.total_cost).toLocaleString('id-ID')}</p>
+                                <p className="text-gray-900 font-bold">Rp {formatCost(item.total_cost)}</p>
                               </div>
                             </div>
                           </div>

@@ -60,6 +60,8 @@ const createUsersTable = () => {
       last_login TIMESTAMP NULL,
       session_token VARCHAR(255) NULL,
       session_expires_at TIMESTAMP NULL,
+      created_by VARCHAR(255) NULL,
+      updated_by VARCHAR(255) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `;
@@ -149,6 +151,12 @@ const createUsersTable = () => {
           });
         }
       });
+      db.query(`ALTER TABLE users ADD COLUMN created_by VARCHAR(255) NULL`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding created_by to users:', err);
+      });
+      db.query(`ALTER TABLE users ADD COLUMN updated_by VARCHAR(255) NULL`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding updated_by to users:', err);
+      });
     }
   });
 };
@@ -167,6 +175,7 @@ const createProcurementRequestsTable = () => {
       rejection_reason TEXT,
       rejected_from_waiting BOOLEAN DEFAULT FALSE,
       deleted_from_received BOOLEAN DEFAULT FALSE,
+      updated_by VARCHAR(255) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
@@ -177,6 +186,9 @@ const createProcurementRequestsTable = () => {
       console.error('Error creating procurement_requests table:', err);
     } else {
       console.log('Procurement requests table ready');
+      db.query(`ALTER TABLE procurement_requests ADD COLUMN updated_by VARCHAR(255) NULL`, (err) => {
+        if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('Error adding updated_by to procurement_requests:', err);
+      });
     }
   });
 };
@@ -467,7 +479,7 @@ const createAssetsTable = () => {
       category ENUM('Camera Gear', 'Lighting', 'Booth Equipment', 'Computers', 'Furniture', 'Other') NOT NULL,
       status ENUM('Available', 'In Use', 'Maintenance', 'Drafted', 'Deleted', 'Deleted Draft') DEFAULT 'Available',
       location ENUM('In Studio', 'Off Site') NOT NULL,
-      `condition` ENUM('Good', 'Fair', 'Poor') NOT NULL,
+      \`condition\` ENUM('Good', 'Fair', 'Poor') NOT NULL,
       quantity INT DEFAULT 1,
       photo_attachment VARCHAR(255),
       has_barcode BOOLEAN DEFAULT FALSE,
@@ -495,7 +507,7 @@ const createAssetsTable = () => {
       });
       const alterQuery = `
         ALTER TABLE assets
-        ADD COLUMN quantity INT DEFAULT 1 AFTER `condition`
+        ADD COLUMN quantity INT DEFAULT 1 AFTER \`condition\`
       `;
       db.query(alterQuery, (err) => {
         if (err && err.code !== 'ER_DUP_FIELDNAME') {

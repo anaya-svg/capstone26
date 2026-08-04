@@ -61,6 +61,8 @@ router.get('/', (req, res) => {
       i.category_id,
       i.uom_id,
       i.attachment,
+      i.created_by,
+      i.updated_by,
       (
         SELECT pr.supplier
         FROM procurement_request_items pri
@@ -491,7 +493,9 @@ router.post('/', upload.single('attachment'), (req, res) => {
             uom_id,
             vendor,
             stock_status,
-            attachment: hasAttachmentColumn ? attachment : null
+            attachment: hasAttachmentColumn ? attachment : null,
+            created_by: creator,
+            updated_by: creator
           }
         });
       });

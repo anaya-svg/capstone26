@@ -205,7 +205,8 @@ function UserManagement() {
         full_name: formData.full_name,
         email: formData.email,
         role: formData.role,
-        status: formData.status
+        status: formData.status,
+        updated_by: user?.full_name || 'N/A'
       }
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/users/${selectedUser.id}`, {
@@ -241,7 +242,10 @@ function UserManagement() {
       })
 
       const data = await response.json()
-      if (data.success) {
+      if (response.status === 403 && data.hasRecords) {
+        setShowDeleteModal(false)
+        showSystemNotice('warning', data.message)
+      } else if (data.success) {
         setShowDeleteModal(false)
         fetchSummary()
         fetchUsers()
@@ -279,7 +283,7 @@ function UserManagement() {
         </div>
 
         {systemNotice.message && (
-          <div className={`mb-4 rounded-lg px-4 py-3 text-sm font-medium ${systemNotice.type === 'error' ? 'bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300' : 'bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300'}`}>
+          <div className={`mb-4 rounded-lg px-4 py-3 text-sm font-medium ${systemNotice.type === 'error' ? 'bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300' : systemNotice.type === 'warning' ? 'bg-yellow-50 border border-yellow-200 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-300' : 'bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300'}`}>
             <div className="flex items-center justify-between gap-3">
               <span>{systemNotice.message}</span>
               <button
@@ -453,8 +457,15 @@ function UserManagement() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowViewModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">User Details</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">User Details</h2>
+                {selectedUser.updated_by && (
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    Updated By: {selectedUser.updated_by}
+                  </span>
+                )}
+              </div>
               <div className="space-y-3">
                 <div>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">ID:</p>
@@ -510,8 +521,15 @@ function UserManagement() {
               setFormErrors({})
             })}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Edit User</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Edit User</h2>
+                {selectedUser.updated_by && (
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    Updated By: {selectedUser.updated_by}
+                  </span>
+                )}
+              </div>
               <form onSubmit={handleSubmitEdit} noValidate>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name *</label>

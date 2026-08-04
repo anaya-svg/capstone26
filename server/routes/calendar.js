@@ -88,6 +88,7 @@ router.get('/:activity_id', (req, res) => {
       activity_date,
       repeat_type,
       created_by,
+      updated_by,
       created_at
     FROM calendar_activities
     WHERE activity_id = ?
@@ -227,6 +228,7 @@ router.put('/:activity_id', (req, res) => {
         activity_date,
         repeat_type,
         created_by,
+        updated_by,
         created_at
       FROM calendar_activities
       WHERE activity_id = ?

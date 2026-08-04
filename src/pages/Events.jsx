@@ -1525,19 +1525,21 @@ function Events() {
         >
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4">
             <div className="p-6 relative">
-              <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{formData.created_by || 'N/A'}</span>
-                {formData.updated_by && formData.updated_by !== formData.created_by && (
-                  <>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{formData.updated_by}</span>
-                  </>
-                )}
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800">
+                  {isEditModalOpen ? 'Edit Event' : 'Create New Event'}
+                </h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {formData.created_by || 'N/A'}
+                  </span>
+                  {formData.updated_by && formData.updated_by !== formData.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {formData.updated_by}
+                    </span>
+                  )}
+                </div>
               </div>
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
-                {isEditModalOpen ? 'Edit Event' : 'Create New Event'}
-              </h2>
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1953,7 +1955,7 @@ function Events() {
                   >
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <span className={`text-[10px] font-bold tracking-widest ${theme.textHeader} uppercase px-2.5 py-1 rounded-full`}>
+                        <span className={`text-[10px] uppercase font-bold ${theme.textHeader} px-2.5 py-1 rounded-full`}>
                           {pkg.badge}
                         </span>
                       </div>
@@ -2483,18 +2485,18 @@ function Events() {
         >
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4">
             <div className="p-6 relative">
-              <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedEvent?.created_by || 'N/A'}</span>
-                {selectedEvent?.updated_by && selectedEvent.updated_by !== selectedEvent.created_by && (
-                  <>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedEvent.updated_by}</span>
-                  </>
-                )}
-              </div>
-              <div className="flex justify-between items-center border-b pb-4 mb-4 pr-32">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
                 <h2 className="text-xl font-bold text-gray-800">Event Details</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedEvent?.created_by || 'N/A'}
+                  </span>
+                  {selectedEvent?.updated_by && selectedEvent.updated_by !== selectedEvent.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {selectedEvent.updated_by}
+                    </span>
+                  )}
+                </div>
               </div>
               {selectedEvent.is_deleted ? (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">

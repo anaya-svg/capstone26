@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
   const offset = (pageNum - 1) * limitNum;
 
   let query = `
-    SELECT id, full_name, email, role, is_verified, status, last_login, created_at
+    SELECT id, full_name, email, role, is_verified, status, last_login, created_at, created_by, updated_by
     FROM users
     WHERE 1=1
   `;
@@ -162,12 +162,14 @@ router.post('/', (req, res) => {
         });
       }
 
+      const creator = req.body.created_by || 'System';
+
       const query = `
-        INSERT INTO users (full_name, email, password, role, is_verified, status)
-        VALUES (?, ?, ?, ?, TRUE, ?)
+        INSERT INTO users (full_name, email, password, role, is_verified, status, created_by, updated_by)
+        VALUES (?, ?, ?, ?, TRUE, ?, ?, ?)
       `;
 
-      db.query(query, [full_name, email, hashedPassword, role, status], (err, result) => {
+      db.query(query, [full_name, email, hashedPassword, role, status, creator, creator], (err, result) => {
         if (err) {
           console.error('Error creating user:', err);
           return res.status(500).json({
@@ -195,7 +197,14 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   const db = req.app.locals.db;
   const userId = req.params.id;
-  const { full_name, email, role, status } = req.body;
+  const { full_name, email, role, status, updated_by } = req.body;
+
+  if (!full_name || !email || !role || !status) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please provide all required fields'
+    });
+  }
 
   const checkQuery = `SELECT id FROM users WHERE email = ? AND id != ?`;
   db.query(checkQuery, [email, userId], (err, results) => {
@@ -216,11 +225,11 @@ router.put('/:id', (req, res) => {
 
     const query = `
       UPDATE users
-      SET full_name = ?, email = ?, role = ?, status = ?
+      SET full_name = ?, email = ?, role = ?, status = ?, updated_by = ?
       WHERE id = ?
     `;
 
-    db.query(query, [full_name, email, role, status, userId], (err, result) => {
+    db.query(query, [full_name, email, role, status, updated_by || 'N/A', userId], (err, result) => {
       if (err) {
         console.error('Error updating user:', err);
         return res.status(500).json({
@@ -274,27 +283,90 @@ router.delete('/:id', (req, res) => {
   const db = req.app.locals.db;
   const userId = req.params.id;
 
-  const query = `DELETE FROM users WHERE id = ?`;
-
-  db.query(query, [userId], (err, result) => {
+  // First, get the user's full_name to check for records
+  const getUserQuery = `SELECT full_name, email FROM users WHERE id = ?`;
+  db.query(getUserQuery, [userId], (err, userResults) => {
     if (err) {
-      console.error('Error deleting user:', err);
+      console.error('Error fetching user:', err);
       return res.status(500).json({
         success: false,
-        message: 'Error deleting user'
+        message: 'Error fetching user'
       });
     }
 
-    if (result.affectedRows === 0) {
+    if (userResults.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
 
-    res.json({
-      success: true,
-      message: 'User deleted successfully'
+    const userFullName = userResults[0].full_name;
+    const userEmail = userResults[0].email;
+
+    // Check if user has any records in the system
+    const checkQueries = [
+      { table: 'users', query: `SELECT COUNT(*) as count FROM users WHERE created_by = ? OR updated_by = ?` },
+      { table: 'procurement_requests', query: `SELECT COUNT(*) as count FROM procurement_requests WHERE requested_by = ? OR updated_by = ?` },
+      { table: 'events', query: `SELECT COUNT(*) as count FROM events WHERE created_by = ? OR updated_by = ?` },
+      { table: 'calendar_activities', query: `SELECT COUNT(*) as count FROM calendar_activities WHERE created_by = ? OR updated_by = ?` },
+      { table: 'assets', query: `SELECT COUNT(*) as count FROM assets WHERE created_by = ? OR updated_by = ?` },
+      { table: 'customers', query: `SELECT COUNT(*) as count FROM customers WHERE created_by = ? OR updated_by = ?` },
+      { table: 'customer_visits', query: `SELECT COUNT(*) as count FROM customer_visits WHERE created_by = ? OR updated_by = ?` },
+      { table: 'inventory', query: `SELECT COUNT(*) as count FROM inventory WHERE created_by = ? OR updated_by = ?` }
+    ];
+
+    let completedChecks = 0;
+    let hasRecords = false;
+    let recordTables = [];
+
+    checkQueries.forEach(({ table, query }) => {
+      db.query(query, [userFullName, userFullName], (err, results) => {
+        if (err) {
+          console.error(`Error checking ${table}:`, err);
+        } else {
+          if (results[0].count > 0) {
+            hasRecords = true;
+            recordTables.push(table);
+          }
+        }
+
+        completedChecks++;
+        if (completedChecks === checkQueries.length) {
+          if (hasRecords) {
+            return res.status(403).json({
+              success: false,
+              message: 'This user cannot be deleted because they have created or updated records in the system. Please contact the IT team for assistance.',
+              hasRecords: true,
+              recordTables
+            });
+          }
+
+          // If no records found, proceed with deletion
+          const deleteQuery = `DELETE FROM users WHERE id = ?`;
+          db.query(deleteQuery, [userId], (err, result) => {
+            if (err) {
+              console.error('Error deleting user:', err);
+              return res.status(500).json({
+                success: false,
+                message: 'Error deleting user'
+              });
+            }
+
+            if (result.affectedRows === 0) {
+              return res.status(404).json({
+                success: false,
+                message: 'User not found'
+              });
+            }
+
+            res.json({
+              success: true,
+              message: 'User deleted successfully'
+            });
+          });
+        }
+      });
     });
   });
 });

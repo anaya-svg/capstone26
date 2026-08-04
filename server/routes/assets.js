@@ -399,7 +399,7 @@ router.post('/', upload.single('photo_attachment'), (req, res) => {
         });
       }
 
-      const selectQuery = 'SELECT * FROM assets WHERE asset_id = ?';
+      const selectQuery = 'SELECT * FROM assets WHERE id = ?';
       db.query(selectQuery, [result.insertId], (err, results) => {
         if (err) {
           console.error('Error fetching created asset:', err);

@@ -1602,17 +1602,19 @@ function Customers() {
             onMouseDown={(e) => handleBackdropClose(e, closeViewModal)}
           >
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-4xl relative max-h-[95vh] overflow-y-auto m-4">
-              <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedCustomer.created_by || 'N/A'}</span>
-                {selectedCustomer.updated_by && (
-                  <>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedCustomer.updated_by}</span>
-                  </>
-                )}
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Customer Details</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedCustomer.created_by || 'N/A'}
+                  </span>
+                  {selectedCustomer.updated_by && (
+                    <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      Updated By: {selectedCustomer.updated_by}
+                    </span>
+                  )}
+                </div>
               </div>
-              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Customer Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Customer Name:</p>
@@ -1825,8 +1827,20 @@ function Customers() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, closeEditModal)}
           >
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4">Edit Customer</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Edit Customer</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedCustomer.created_by || 'N/A'}
+                  </span>
+                  {selectedCustomer.updated_by && (
+                    <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      Updated By: {selectedCustomer.updated_by}
+                    </span>
+                  )}
+                </div>
+              </div>
               <form onSubmit={handleSubmitEdit} noValidate>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
@@ -1885,9 +1899,21 @@ function Customers() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowDeleteModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Delete Customer</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Delete Customer</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedCustomer.created_by || 'N/A'}
+                  </span>
+                  {selectedCustomer.updated_by && (
+                    <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      Updated By: {selectedCustomer.updated_by}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 mt-4">
                 Are you sure you want to delete customer "{selectedCustomer.name}"? This action cannot be undone.
               </p>
               <div className="flex justify-end gap-2">
@@ -2316,10 +2342,12 @@ function Customers() {
         {showAddInStudioModal && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
-            onMouseDown={(e) => handleBackdropClose(e, closeAddInStudioModal)}
+            onMouseDown={(e) => handleBackdropClose(e, () => setShowAddInStudioModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Add Customer to In Studio</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Assign to In Studio</h2>
+              </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Customer Name *</label>
                 <input
@@ -2401,11 +2429,13 @@ function Customers() {
         {showAddOffSiteModal && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
-            onMouseDown={(e) => handleBackdropClose(e, closeAddOffSiteModal)}
+            onMouseDown={(e) => handleBackdropClose(e, () => setShowAddOffSiteModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Add Customer to Off Site</h2>
-              <div className="mb-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md relative">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Assign to Off Site</h2>
+              </div>
+              <div className="mb-4 relative">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Customer Name *</label>
                 <input
                   type="text"
@@ -2486,10 +2516,12 @@ function Customers() {
         {showManageVisitsModal && selectedCustomer && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
-            onMouseDown={(e) => handleBackdropClose(e, closeManageVisitsModal)}
+            onMouseDown={(e) => handleBackdropClose(e, () => setShowManageVisitsModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Manage Visits for {selectedCustomer.name}</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-4xl relative max-h-[90vh] overflow-y-auto m-4">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Manage Visits for {selectedCustomer.name}</h2>
+              </div>
               {customerVisits.length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400 mb-4">No visits recorded yet.</p>
               ) : (
@@ -2530,10 +2562,12 @@ function Customers() {
         {showDeleteVisitModal && selectedVisitForDelete && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
-            onMouseDown={(e) => handleBackdropClose(e, closeDeleteVisitModal)}
+            onMouseDown={(e) => handleBackdropClose(e, () => setShowDeleteVisitModal(false))}
           >
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Delete Visit</h2>
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Delete Visit</h2>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Are you sure you want to delete the visit from {formatDate(selectedVisitForDelete.visit_date)}? This action cannot be undone.
               </p>
@@ -2564,8 +2598,10 @@ function Customers() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowMissingDataModal(false))}
           >
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-sm">
-              <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Missing Data</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-sm relative">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Missing Data</h2>
+              </div>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">Complete the missing data.</p>
               <div className="flex justify-end gap-2">
                 <button

@@ -710,9 +710,10 @@ router.post('/', upload.single('attachment'), (req, res) => {
     const quantity = parseInt(item.quantity);
     const cost = parseFloat(item.cost);
     const additionalCost = item.additional_cost ? parseFloat(item.additional_cost) : 0;
-    const itemTotal = (cost * quantity) + additionalCost;
+    const itemTotal = Math.round(((cost * quantity) + additionalCost) * 100) / 100;
     total_cost += itemTotal;
   });
+  total_cost = Math.round(total_cost * 100) / 100;
 
   const query = 'SELECT base_id FROM procurement_requests ORDER BY base_id DESC LIMIT 1';
   db.query(query, (err, results) => {
@@ -870,11 +871,15 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
     requested_by,
     supplier,
     marketplace_link,
-    status
+    status,
+    updated_by
   } = req.body;
 
   // Use logged-in user's name if requested_by is not provided
-  const finalRequestedBy = requested_by || req.user?.name || 'Unknown User';
+  // If requireAuth is disabled, req.user will be undefined.
+  const userFromRequest = req.user?.name || req.user?.full_name;
+  const finalRequestedBy = requested_by || userFromRequest || 'Unknown User';
+  const finalUpdatedBy = updated_by || userFromRequest || finalRequestedBy;
 
   let parsedItems = items;
   if (typeof items === 'string') {
@@ -905,18 +910,19 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
     const quantity = parseInt(item.quantity);
     const cost = parseFloat(item.cost);
     const additionalCost = item.additional_cost ? parseFloat(item.additional_cost) : 0;
-    const itemTotal = (cost * quantity) + additionalCost;
+    const itemTotal = Math.round(((cost * quantity) + additionalCost) * 100) / 100;
     total_cost += itemTotal;
   });
+  total_cost = Math.round(total_cost * 100) / 100;
 
   const updateQuery = `
     UPDATE procurement_requests
-    SET requested_by = ?, supplier = ?, marketplace_link = ?, attachment = ?, status = ?, total_cost = ?
+    SET requested_by = ?, supplier = ?, marketplace_link = ?, attachment = ?, status = ?, total_cost = ?, updated_by = ?
     WHERE pr_id = ?
   `;
 
   db.query(updateQuery, [
-    finalRequestedBy, supplier, marketplace_link, attachment, status || 'Waiting Approval', total_cost, pr_id
+    finalRequestedBy, supplier, marketplace_link, attachment, status || 'Waiting Approval', total_cost, finalUpdatedBy, pr_id
   ], (err, result) => {
     if (err) {
       return res.status(500).json({
@@ -1003,17 +1009,35 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
     function checkComplete() {
       completedItems++;
       if (completedItems === totalItems) {
-        res.json({
-          success: true,
-          message: 'Procurement request updated successfully'
+        db.query('SELECT * FROM procurement_requests WHERE pr_id = ?', [pr_id], (err, results) => {
+          if (err) {
+            return res.json({
+              success: true,
+              message: 'Procurement request updated successfully'
+            });
+          }
+          res.json({
+            success: true,
+            message: 'Procurement request updated successfully',
+            data: results[0]
+          });
         });
       }
     }
 
     if (totalItems === 0) {
-      res.json({
-        success: true,
-        message: 'Procurement request updated successfully'
+      db.query('SELECT * FROM procurement_requests WHERE pr_id = ?', [pr_id], (err, results) => {
+        if (err) {
+          return res.json({
+            success: true,
+            message: 'Procurement request updated successfully'
+          });
+        }
+        res.json({
+          success: true,
+          message: 'Procurement request updated successfully',
+          data: results[0]
+        });
       });
     }
   }
@@ -1022,7 +1046,9 @@ router.put('/:pr_id', upload.single('attachment'), (req, res) => {
 router.patch('/:pr_id/status', (req, res) => {
   const db = req.app.locals.db;
   const { pr_id } = req.params;
-  const { status, rejection_reason } = req.body;
+  const { status, rejection_reason, updated_by } = req.body;
+  const userFromRequest = req.user?.name || req.user?.full_name;
+  const finalUpdatedBy = updated_by || userFromRequest || 'Unknown User';
 
   const getQuery = 'SELECT base_id, status as current_status FROM procurement_requests WHERE pr_id = ?';
   db.query(getQuery, [pr_id], (err, results) => {
@@ -1046,19 +1072,28 @@ router.patch('/:pr_id/status', (req, res) => {
       if (request.current_status === 'Waiting Approval' && status === 'Rejected') {
         const updateQuery = `
           UPDATE procurement_requests
-          SET status = 'Draft', rejected_from_waiting = TRUE, pr_id = ?, rejection_reason = ?
+          SET status = 'Draft', rejected_from_waiting = TRUE, pr_id = ?, rejection_reason = ?, updated_by = ?
           WHERE pr_id = ?
         `;
-        db.query(updateQuery, [`PR${base_id.toString().padStart(5, '0')}`, rejection_reason || null, pr_id], (err, result) => {
+        db.query(updateQuery, [`PR${base_id.toString().padStart(5, '0')}`, rejection_reason || null, finalUpdatedBy, pr_id], (err, result) => {
           if (err) {
             return res.status(500).json({
               success: false,
               message: 'Error updating procurement request status'
             });
           }
-          res.json({
-            success: true,
-            message: 'Procurement request status updated successfully'
+          db.query('SELECT * FROM procurement_requests WHERE pr_id = ?', [`PR${base_id.toString().padStart(5, '0')}`], (err, results) => {
+            if (err) {
+              return res.json({
+                success: true,
+                message: 'Procurement request status updated successfully'
+              });
+            }
+            res.json({
+              success: true,
+              message: 'Procurement request status updated successfully',
+              data: results[0]
+            });
           });
         });
         return;
@@ -1102,7 +1137,7 @@ router.patch('/:pr_id/status', (req, res) => {
             });
           }
 
-          const updateQuery = 'UPDATE procurement_requests SET status = ?, pr_id = ?, rejection_reason = ? WHERE pr_id = ?';
+          const updateQuery = 'UPDATE procurement_requests SET status = ?, pr_id = ?, rejection_reason = ?, updated_by = ? WHERE pr_id = ?';
 
           updateItemsPrId(pr_id, new_pr_id, (err) => {
             if (err) {
@@ -1114,7 +1149,7 @@ router.patch('/:pr_id/status', (req, res) => {
               });
             }
 
-            db.query(updateQuery, [status, new_pr_id, rejection_reason || null, pr_id], (err, result) => {
+            db.query(updateQuery, [status, new_pr_id, rejection_reason || null, finalUpdatedBy, pr_id], (err, result) => {
               db.query('SET FOREIGN_KEY_CHECKS = 1');
 
               if (err) {
@@ -1154,7 +1189,7 @@ router.patch('/:pr_id/status', (req, res) => {
                           message: 'Error updating procurement request items: ' + err2.message
                         });
                       }
-                      db.query(updateQuery, [status, new_pr_id, base_id, rejection_reason || null, pr_id], (err3, result3) => {
+                      db.query(updateQuery, [status, new_pr_id, rejection_reason || null, finalUpdatedBy, pr_id], (err3, result3) => {
                         db.query('SET FOREIGN_KEY_CHECKS = 1');
                         if (err3) {
                           console.error('SQL Error (retry):', err3);
@@ -1163,9 +1198,18 @@ router.patch('/:pr_id/status', (req, res) => {
                             message: 'Error updating procurement request status: ' + err3.message
                           });
                         }
-                        res.json({
-                          success: true,
-                          message: 'Procurement request status updated successfully'
+                        db.query('SELECT * FROM procurement_requests WHERE pr_id = ?', [new_pr_id], (err, results) => {
+                          if (err) {
+                            return res.json({
+                              success: true,
+                              message: 'Procurement request status updated successfully'
+                            });
+                          }
+                          res.json({
+                            success: true,
+                            message: 'Procurement request status updated successfully',
+                            data: results[0]
+                          });
                         });
                       });
                     });
@@ -1182,9 +1226,18 @@ router.patch('/:pr_id/status', (req, res) => {
                   if (err) console.error('Error updating quantities:', err);
                 });
               }
-              res.json({
-                success: true,
-                message: 'Procurement request status updated successfully'
+              db.query('SELECT * FROM procurement_requests WHERE pr_id = ?', [new_pr_id], (err, results) => {
+                if (err) {
+                  return res.json({
+                    success: true,
+                    message: 'Procurement request status updated successfully'
+                  });
+                }
+                res.json({
+                  success: true,
+                  message: 'Procurement request status updated successfully',
+                  data: results[0]
+                });
               });
             });
           });
@@ -1379,7 +1432,9 @@ function decreaseQuantitiesOnDeleteGlobal(db, pr_id, callback) {
 router.delete('/:pr_id', (req, res) => {
   const db = req.app.locals.db;
   const { pr_id } = req.params;
-  const { status, rejection_reason } = req.query;
+  const { status, rejection_reason, updated_by } = req.query;
+  const userFromRequest = req.user?.name || req.user?.full_name;
+  const finalUpdatedBy = updated_by || userFromRequest || 'Unknown User';
 
   if (status === 'deleted') {
     const getQuery = 'SELECT base_id FROM procurement_requests WHERE pr_id = ?';
@@ -1405,8 +1460,8 @@ router.delete('/:pr_id', (req, res) => {
           console.error('Error decreasing quantities on delete:', err);
         }
 
-        const updateQuery = 'UPDATE procurement_requests SET status = ?, deleted_from_received = TRUE, pr_id = ?, rejection_reason = ? WHERE pr_id = ?';
-        db.query(updateQuery, ['Rejected', new_pr_id, rejection_reason || null, pr_id], (err, result) => {
+        const updateQuery = 'UPDATE procurement_requests SET status = ?, deleted_from_received = TRUE, pr_id = ?, rejection_reason = ?, updated_by = ? WHERE pr_id = ?';
+        db.query(updateQuery, ['Rejected', new_pr_id, rejection_reason || null, finalUpdatedBy, pr_id], (err, result) => {
           if (err) {
             return res.status(500).json({
               success: false,

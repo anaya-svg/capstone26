@@ -1252,8 +1252,20 @@ function Assets() {
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm"
             onMouseDown={(e) => handleBackdropClose(e, () => setShowViewModal(false))}
           >
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <h2 className="text-xl font-bold mb-4">View Asset</h2>
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">View Asset</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedAsset.created_by || 'N/A'}
+                  </span>
+                  {selectedAsset.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {selectedAsset.updated_by}
+                    </span>
+                  )}
+                </div>
+              </div>
               {selectedAsset.status === 'Deleted' || selectedAsset.status === 'Deleted Draft' ? (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
                   <p className="text-sm font-medium text-red-800">Delete Reason:</p>
@@ -1411,17 +1423,19 @@ function Assets() {
             onMouseDown={(e) => handleBackdropClose(e, handleCloseEditModal)}
           >
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative overflow-y-auto max-h-[90vh]">
-              <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset?.created_by || 'N/A'}</span>
-                {selectedAsset?.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
-                  <>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset.updated_by}</span>
-                  </>
-                )}
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Edit Asset</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedAsset.created_by || 'N/A'}
+                  </span>
+                  {selectedAsset.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {selectedAsset.updated_by}
+                    </span>
+                  )}
+                </div>
               </div>
-              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">Edit Asset</h2>
               
               {/* Events Section */}
               {assetEvents.length > 0 && (
@@ -1678,17 +1692,19 @@ function Assets() {
             onMouseDown={(e) => handleBackdropClose(e, () => setShowHardDeleteModal(false))}
           >
             <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-2xl relative">
-              <div className="absolute top-6 right-6 flex flex-col items-end">
-                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none">Created By</span>
-                <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset?.created_by || 'N/A'}</span>
-                {selectedAsset?.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
-                  <>
-                    <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-slate-500 leading-none mt-2">Updated By</span>
-                    <span className="text-sm font-bold text-gray-600 dark:text-slate-300 tracking-tight">{selectedAsset.updated_by}</span>
-                  </>
-                )}
+              <div className="flex justify-between items-center border-b pb-4 mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white leading-tight">Asset Details</h2>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full mb-1">
+                    Created By: {selectedAsset.created_by || 'N/A'}
+                  </span>
+                  {selectedAsset.updated_by && selectedAsset.updated_by !== selectedAsset.created_by && (
+                    <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                      Updated By: {selectedAsset.updated_by}
+                    </span>
+                  )}
+                </div>
               </div>
-              <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white leading-tight">Asset Details</h2>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">Are you sure you want to permanently delete this asset? This action cannot be undone.</p>
               <div className="flex justify-end gap-2">
                 <button
