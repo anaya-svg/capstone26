@@ -393,13 +393,13 @@ function Assets() {
       const asset = assets.find(a => a.asset_id === scannedAssetId)
       
       if (!asset) {
-        setScanError('Asset tidak terdaftar atau QR tidak dikenal')
+        setScanError('Asset not registered or unknown QR code')
         setIsScanning(false)
         return
       }
       
       if (asset.has_barcode !== 1) {
-        setScanError('Barcode QR untuk aset ini tidak aktif')
+        setScanError('QR barcode for this asset is not active')
         setIsScanning(false)
         return
       }
