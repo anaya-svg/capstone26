@@ -1801,6 +1801,7 @@ function Events() {
                       )}
                     </div>
                   ))}
+                  {formErrors.assets && <p className="text-red-500 text-xs mt-1 font-semibold">{formErrors.assets}</p>}
                 </div>
 
                 <div className="flex justify-end gap-2 mt-6">
